@@ -29,9 +29,13 @@ namespace Sweep.Forms
         }
 
         public void SetMonitors(int idx) {
-            for (int i = 0; i > idx; i++) {
+            monitors.Items.Clear();
+            for (int i = 0; i < idx; i++)
+            {
                 monitors.Items.Add(i);
             }
+
+
         }
 
         private void quality_SelectedIndexChanged(object sender, EventArgs e)
@@ -55,7 +59,7 @@ namespace Sweep.Forms
 
         private void monitors_SelectedIndexChanged(object sender, EventArgs e)
         {
-            MonitorChanged.Invoke(Int32.Parse(monitors.Text));
+            MonitorChanged?.Invoke(Int32.Parse(monitors.Text));
         }
     }
 }

