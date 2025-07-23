@@ -14,7 +14,8 @@ namespace Sweep.Forms
     public partial class ScreenViewer : Form
     {
         public Action<string> QualityChanged;
-        public Action<bool> Screen;
+        public Action<bool> ScreenEvent;
+        public Action<int> MonitorChanged;
         public Action Closing;
 
         public bool pushbox = true;
@@ -27,6 +28,12 @@ namespace Sweep.Forms
             screenimg.Image = img;
         }
 
+        public void SetMonitors(int idx) {
+            for (int i = 0; i > idx; i++) {
+                monitors.Items.Add(i);
+            }
+        }
+
         private void quality_SelectedIndexChanged(object sender, EventArgs e)
         {
             QualityChanged.Invoke(quality.Text);
@@ -35,12 +42,20 @@ namespace Sweep.Forms
         private void guna2GradientButton1_Click(object sender, EventArgs e)
         {
             pushbox = !pushbox;
-            Screen.Invoke(pushbox);
+            ScreenEvent?.Invoke(pushbox);
+
+            guna2GradientButton1.Text = pushbox ? "Stop" : "Play";
+            guna2GradientButton1.Image = pushbox ? global::Sweep.Properties.Resources.pause : global::Sweep.Properties.Resources.play;
         }
 
         private void ScreenViewer_FormClosing(object sender, FormClosingEventArgs e)
         {
             Closing.Invoke();
+        }
+
+        private void monitors_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            MonitorChanged.Invoke(Int32.Parse(monitors.Text));
         }
     }
 }

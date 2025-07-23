@@ -29,46 +29,13 @@
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ScreenViewer));
-            this.guna2GradientButton1 = new Guna.UI2.WinForms.Guna2GradientButton();
-            this.screenimg = new System.Windows.Forms.PictureBox();
             this.quality = new System.Windows.Forms.ComboBox();
             this.monitors = new System.Windows.Forms.ComboBox();
             this.mouse = new Guna.UI2.WinForms.Guna2CheckBox();
+            this.guna2GradientButton1 = new Guna.UI2.WinForms.Guna2GradientButton();
+            this.screenimg = new System.Windows.Forms.PictureBox();
             ((System.ComponentModel.ISupportInitialize)(this.screenimg)).BeginInit();
             this.SuspendLayout();
-            // 
-            // guna2GradientButton1
-            // 
-            this.guna2GradientButton1.Anchor = System.Windows.Forms.AnchorStyles.Bottom;
-            this.guna2GradientButton1.BorderRadius = 3;
-            this.guna2GradientButton1.DisabledState.BorderColor = System.Drawing.Color.DarkGray;
-            this.guna2GradientButton1.DisabledState.CustomBorderColor = System.Drawing.Color.DarkGray;
-            this.guna2GradientButton1.DisabledState.FillColor = System.Drawing.Color.FromArgb(((int)(((byte)(169)))), ((int)(((byte)(169)))), ((int)(((byte)(169)))));
-            this.guna2GradientButton1.DisabledState.FillColor2 = System.Drawing.Color.FromArgb(((int)(((byte)(169)))), ((int)(((byte)(169)))), ((int)(((byte)(169)))));
-            this.guna2GradientButton1.DisabledState.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(141)))), ((int)(((byte)(141)))), ((int)(((byte)(141)))));
-            this.guna2GradientButton1.Font = new System.Drawing.Font("Segoe UI", 9F);
-            this.guna2GradientButton1.ForeColor = System.Drawing.Color.White;
-            this.guna2GradientButton1.Image = global::Sweep.Properties.Resources.pause;
-            this.guna2GradientButton1.ImageAlign = System.Windows.Forms.HorizontalAlignment.Left;
-            this.guna2GradientButton1.Location = new System.Drawing.Point(117, 386);
-            this.guna2GradientButton1.Name = "guna2GradientButton1";
-            this.guna2GradientButton1.Size = new System.Drawing.Size(203, 25);
-            this.guna2GradientButton1.TabIndex = 1;
-            this.guna2GradientButton1.Text = "Stop";
-            this.guna2GradientButton1.Click += new System.EventHandler(this.guna2GradientButton1_Click);
-            // 
-            // screenimg
-            // 
-            this.screenimg.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.screenimg.Image = global::Sweep.Properties.Resources._019322b3_e9f2_7547_8222_14edf052d8ab;
-            this.screenimg.Location = new System.Drawing.Point(1, 23);
-            this.screenimg.Name = "screenimg";
-            this.screenimg.Size = new System.Drawing.Size(666, 355);
-            this.screenimg.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
-            this.screenimg.TabIndex = 0;
-            this.screenimg.TabStop = false;
             // 
             // quality
             // 
@@ -105,6 +72,7 @@
             this.monitors.Size = new System.Drawing.Size(113, 25);
             this.monitors.TabIndex = 3;
             this.monitors.Text = "0";
+            this.monitors.SelectedIndexChanged += new System.EventHandler(this.monitors_SelectedIndexChanged);
             // 
             // mouse
             // 
@@ -125,6 +93,39 @@
             this.mouse.UncheckedState.BorderRadius = 0;
             this.mouse.UncheckedState.BorderThickness = 0;
             this.mouse.UncheckedState.FillColor = System.Drawing.Color.FromArgb(((int)(((byte)(125)))), ((int)(((byte)(137)))), ((int)(((byte)(149)))));
+            // 
+            // guna2GradientButton1
+            // 
+            this.guna2GradientButton1.Anchor = System.Windows.Forms.AnchorStyles.Bottom;
+            this.guna2GradientButton1.BorderRadius = 3;
+            this.guna2GradientButton1.DisabledState.BorderColor = System.Drawing.Color.DarkGray;
+            this.guna2GradientButton1.DisabledState.CustomBorderColor = System.Drawing.Color.DarkGray;
+            this.guna2GradientButton1.DisabledState.FillColor = System.Drawing.Color.FromArgb(((int)(((byte)(169)))), ((int)(((byte)(169)))), ((int)(((byte)(169)))));
+            this.guna2GradientButton1.DisabledState.FillColor2 = System.Drawing.Color.FromArgb(((int)(((byte)(169)))), ((int)(((byte)(169)))), ((int)(((byte)(169)))));
+            this.guna2GradientButton1.DisabledState.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(141)))), ((int)(((byte)(141)))), ((int)(((byte)(141)))));
+            this.guna2GradientButton1.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.guna2GradientButton1.ForeColor = System.Drawing.Color.White;
+            this.guna2GradientButton1.Image = global::Sweep.Properties.Resources.pause;
+            this.guna2GradientButton1.ImageAlign = System.Windows.Forms.HorizontalAlignment.Left;
+            this.guna2GradientButton1.Location = new System.Drawing.Point(117, 386);
+            this.guna2GradientButton1.Name = "guna2GradientButton1";
+            this.guna2GradientButton1.Size = new System.Drawing.Size(203, 25);
+            this.guna2GradientButton1.TabIndex = 1;
+            this.guna2GradientButton1.Text = "Stop";
+            this.guna2GradientButton1.Click += new System.EventHandler(this.guna2GradientButton1_Click);
+            // 
+            // screenimg
+            // 
+            this.screenimg.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.screenimg.Image = global::Sweep.Properties.Resources._019322b3_e9f2_7547_8222_14edf052d8ab;
+            this.screenimg.Location = new System.Drawing.Point(1, 23);
+            this.screenimg.Name = "screenimg";
+            this.screenimg.Size = new System.Drawing.Size(666, 355);
+            this.screenimg.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
+            this.screenimg.TabIndex = 0;
+            this.screenimg.TabStop = false;
             // 
             // ScreenViewer
             // 
