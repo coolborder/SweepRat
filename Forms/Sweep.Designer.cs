@@ -1,4 +1,7 @@
-﻿namespace Sweep.Forms
+﻿using System.Drawing;
+using System.Windows.Forms;
+
+namespace Sweep.Forms
 {
     partial class Sweep
     {
@@ -61,11 +64,11 @@
             this.cpu,
             this.gpu,
             this.uac});
+            this.listView1.FullRowSelect = true;
             this.listView1.HideSelection = false;
-            this.listView1.Location = new System.Drawing.Point(52, 0);
+            this.listView1.Location = new System.Drawing.Point(60, 0);
             this.listView1.Name = "listView1";
-            this.listView1.OwnerDraw = true;
-            this.listView1.Size = new System.Drawing.Size(915, 466);
+            this.listView1.Size = new System.Drawing.Size(932, 466);
             this.listView1.TabIndex = 0;
             this.listView1.UseCompatibleStateImageBehavior = false;
             this.listView1.View = System.Windows.Forms.View.Details;
@@ -134,13 +137,13 @@
             this.rat.RenderStyle.SelectionForeColor = System.Drawing.Color.White;
             this.rat.RenderStyle.SeparatorColor = System.Drawing.Color.Gainsboro;
             this.rat.RenderStyle.TextRenderingHint = System.Drawing.Text.TextRenderingHint.SystemDefault;
-            this.rat.Size = new System.Drawing.Size(181, 48);
+            this.rat.Size = new System.Drawing.Size(131, 26);
             // 
             // seescreen
             // 
             this.seescreen.Image = global::Sweep.Properties.Resources.desktop;
             this.seescreen.Name = "seescreen";
-            this.seescreen.Size = new System.Drawing.Size(180, 22);
+            this.seescreen.Size = new System.Drawing.Size(130, 22);
             this.seescreen.Text = "See Screen";
             this.seescreen.Click += new System.EventHandler(this.seescreen_Click);
             // 
@@ -149,7 +152,7 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.ClientSize = new System.Drawing.Size(967, 466);
+            this.ClientSize = new System.Drawing.Size(992, 466);
             this.Controls.Add(this.listView1);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "Sweep";

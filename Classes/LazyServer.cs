@@ -14,7 +14,6 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml.Linq;
 
 namespace LazyServer
 {
@@ -34,7 +33,7 @@ namespace LazyServer
         public string FileName { get; set; }
         public long FileSize { get; set; }
         public string ContentType { get; set; }
-        public string Metadata { get; set; } // Custom JSON string or any data
+        public string Metadata { get; set; }
     }
 
     public class MessageEventArgs : EventArgs
@@ -48,7 +47,7 @@ namespace LazyServer
         public byte[] FileBytes { get; set; }
         public FileMetadata FileMeta { get; set; }
         public string TransferId { get; set; } = Guid.NewGuid().ToString();
-        public string Metadata { get; set; } // Added missing property
+        public string Metadata { get; set; }
     }
 
     public class FileOfferEventArgs : EventArgs
@@ -97,6 +96,37 @@ namespace LazyServer
         public event EventHandler<string> ClientConnected;
         public event EventHandler<string> ClientDisconnected;
 
+        public ClientConnection GetConnectionById(string connectionId)
+        {
+            _clients.TryGetValue(connectionId, out var connection);
+            return connection;
+        }
+
+        public bool TryGetConnectionById(string connectionId, out ClientConnection connection)
+        {
+            return _clients.TryGetValue(connectionId, out connection);
+        }
+
+        public IEnumerable<string> GetAllConnectionIds()
+        {
+            return _clients.Keys.ToList();
+        }
+
+        public IEnumerable<ClientConnection> GetAllConnections()
+        {
+            return _clients.Values.ToList();
+        }
+
+        public int GetConnectionCount()
+        {
+            return _clients.Count;
+        }
+
+        public bool IsConnectionActive(string connectionId)
+        {
+            return _clients.TryGetValue(connectionId, out var connection) && connection.IsConnected;
+        }
+
         public async Task StartAsync(int port = 8888)
         {
             GenerateTemporaryCertificate();
@@ -131,11 +161,28 @@ namespace LazyServer
         {
             using (var rsa = RSA.Create(2048))
             {
-                var req = new CertificateRequest("CN=LazyServer", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-                req.CertificateExtensions.Add(new X509KeyUsageExtension(X509KeyUsageFlags.KeyEncipherment | X509KeyUsageFlags.DigitalSignature, false));
-                req.CertificateExtensions.Add(new X509EnhancedKeyUsageExtension(new OidCollection { new Oid("1.3.6.1.5.5.7.3.1") }, false));
+                var req = new CertificateRequest(
+                    "CN=localhost", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
 
-                _serverCertificate = req.CreateSelfSigned(DateTimeOffset.Now, DateTimeOffset.Now.AddDays(1));
+                req.CertificateExtensions.Add(new X509KeyUsageExtension(
+                    X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.KeyEncipherment, false));
+
+                req.CertificateExtensions.Add(new X509EnhancedKeyUsageExtension(
+                    new OidCollection { new Oid("1.3.6.1.5.5.7.3.1") }, false)); // ServerAuth
+
+                // Add Subject Alternative Name for localhost
+                var sanBuilder = new SubjectAlternativeNameBuilder();
+                sanBuilder.AddDnsName("localhost");
+                sanBuilder.AddIpAddress(IPAddress.Loopback);
+                sanBuilder.AddIpAddress(IPAddress.IPv6Loopback);
+                req.CertificateExtensions.Add(sanBuilder.Build());
+
+                _serverCertificate = req.CreateSelfSigned(DateTimeOffset.Now.AddDays(-1), DateTimeOffset.Now.AddDays(365));
+
+                // Important: Export and re-import with private key to ensure it's properly accessible
+                var pfxData = _serverCertificate.Export(X509ContentType.Pfx, "temp");
+                _serverCertificate.Dispose();
+                _serverCertificate = new X509Certificate2(pfxData, "temp", X509KeyStorageFlags.Exportable);
             }
             Console.WriteLine("Temporary SSL certificate generated");
         }
@@ -167,8 +214,14 @@ namespace LazyServer
 
             try
             {
-                var sslStream = new SslStream(tcpClient.GetStream());
-                await sslStream.AuthenticateAsServerAsync(_serverCertificate, false, SslProtocols.Tls12, false);
+                var sslStream = new SslStream(tcpClient.GetStream(), false);
+
+                // Use more compatible SSL/TLS protocols and authentication options
+                await sslStream.AuthenticateAsServerAsync(
+                    _serverCertificate,
+                    clientCertificateRequired: false,
+                    enabledSslProtocols: SslProtocols.Tls12 | SslProtocols.Tls13,
+                    checkCertificateRevocation: false);
 
                 client = new ClientConnection(clientId, tcpClient, sslStream);
                 _clients.TryAdd(clientId, client);
@@ -181,6 +234,7 @@ namespace LazyServer
             catch (Exception ex)
             {
                 Console.WriteLine($"Client {clientId} error: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
             }
             finally
             {
@@ -214,7 +268,7 @@ namespace LazyServer
 
         private async Task ProcessMessage(ClientConnection client, byte[] buffer, int length)
         {
-            if (length < 5) return; // Minimum: type(1) + length(4)
+            if (length < 5) return;
 
             var messageType = (MessageType)buffer[0];
             var payloadLength = BitConverter.ToInt32(buffer, 1);
@@ -222,7 +276,6 @@ namespace LazyServer
             var payload = new byte[payloadLength];
             Array.Copy(buffer, 5, payload, 0, Math.Min(payloadLength, length - 5));
 
-            // If we didn't receive the full payload, read the rest
             var totalReceived = length - 5;
             while (totalReceived < payloadLength)
             {
@@ -255,7 +308,6 @@ namespace LazyServer
                         Metadata = metadata
                     };
 
-                    // Check if this is a file offer with bytes included
                     if (offerData["FileBytes"] != null)
                     {
                         fileRequest.FileBytes = Convert.FromBase64String(offerData["FileBytes"].ToString());
@@ -285,12 +337,10 @@ namespace LazyServer
 
         private async Task HandleFileData(ClientConnection client, byte[] payload)
         {
-            // File data handling for streaming transfers
-            var transferId = Encoding.UTF8.GetString(payload, 0, 36); // GUID length
+            var transferId = Encoding.UTF8.GetString(payload, 0, 36);
             var fileData = new byte[payload.Length - 36];
             Array.Copy(payload, 36, fileData, 0, fileData.Length);
 
-            // Get or create file transfer tracking
             if (!client.ActiveTransfers.ContainsKey(transferId))
             {
                 client.ActiveTransfers[transferId] = new FileTransfer { Id = transferId };
@@ -321,6 +371,14 @@ namespace LazyServer
             if (_clients.TryGetValue(clientId, out var client))
             {
                 await SendMessage(client, MessageType.Message, Encoding.UTF8.GetBytes(message));
+            }
+        }
+
+        public async Task SendMessageToConnection(ClientConnection connection, string message)
+        {
+            if (connection != null && connection.IsConnected)
+            {
+                await SendMessage(connection, MessageType.Message, Encoding.UTF8.GetBytes(message));
             }
         }
 
@@ -360,9 +418,10 @@ namespace LazyServer
     {
         private TcpClient _tcpClient;
         private SslStream _sslStream;
-        private string _serverId = Guid.NewGuid().ToString();
         private bool _isConnected;
         private readonly ConcurrentDictionary<string, FileTransfer> _activeTransfers = new ConcurrentDictionary<string, FileTransfer>();
+
+        public string ConnectionId { get; private set; }
 
         public event EventHandler<MessageEventArgs> MessageReceived;
         public event EventHandler<FileOfferEventArgs> FileOfferReceived;
@@ -379,20 +438,52 @@ namespace LazyServer
                 _tcpClient = new TcpClient();
                 await _tcpClient.ConnectAsync(hostname, port);
 
-                _sslStream = new SslStream(_tcpClient.GetStream(), false, (sender, certificate, chain, sslPolicyErrors) => true);
-                await _sslStream.AuthenticateAsClientAsync("LazyServer");
+                // Create SSL stream with custom certificate validation
+                _sslStream = new SslStream(_tcpClient.GetStream(), false, ValidateServerCertificate);
+
+                // Authenticate as client with proper hostname and protocol settings
+                await _sslStream.AuthenticateAsClientAsync(
+                    hostname,                                    // Use the actual hostname
+                    null,                                       // No client certificates
+                    SslProtocols.Tls12 | SslProtocols.Tls13,   // Support multiple protocols
+                    false                                       // Don't check certificate revocation
+                );
 
                 _isConnected = true;
+                ConnectionId = Guid.NewGuid().ToString();
+
                 Connected?.Invoke(this, EventArgs.Empty);
-                Console.WriteLine($"Connected to LazyServer at {hostname}:{port}");
+                Console.WriteLine($"Connected to LazyServer at {hostname}:{port} with Connection ID: {ConnectionId}");
 
                 _ = Task.Run(ReceiveMessagesAsync);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Connection failed: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
                 throw;
             }
+        }
+
+        private bool ValidateServerCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
+        {
+            // For development/testing with self-signed certificates, accept all certificates
+            // In production, you should implement proper certificate validation
+            if (sslPolicyErrors == SslPolicyErrors.None)
+                return true;
+
+            Console.WriteLine($"SSL Policy Errors: {sslPolicyErrors}");
+
+            // Accept self-signed certificates for development
+            if (sslPolicyErrors == SslPolicyErrors.RemoteCertificateChainErrors ||
+                sslPolicyErrors == SslPolicyErrors.RemoteCertificateNameMismatch ||
+                (sslPolicyErrors & SslPolicyErrors.RemoteCertificateChainErrors) != 0)
+            {
+                Console.WriteLine("Accepting self-signed certificate for development");
+                return true;
+            }
+
+            return false;
         }
 
         public void Disconnect()
@@ -401,7 +492,7 @@ namespace LazyServer
             _sslStream?.Close();
             _tcpClient?.Close();
             Disconnected?.Invoke(this, EventArgs.Empty);
-            Console.WriteLine("Disconnected from LazyServer");
+            Console.WriteLine($"Disconnected from LazyServer (Connection ID: {ConnectionId})");
         }
 
         private async Task ReceiveMessagesAsync()
@@ -443,7 +534,6 @@ namespace LazyServer
                     break;
 
                 case MessageType.FileOffer:
-                    // Handle file offer
                     break;
             }
         }
@@ -462,7 +552,6 @@ namespace LazyServer
 
             var transferId = Guid.NewGuid().ToString();
 
-            // Send file offer with bytes included
             var offerData = new
             {
                 TransferId = transferId,
@@ -491,6 +580,7 @@ namespace LazyServer
         {
             await SendFileBytes(fileBytes, metadata);
         }
+
         public async Task SendFile(string filePath, string metadata = "")
         {
             var fileInfo = new FileInfo(filePath);
@@ -504,7 +594,6 @@ namespace LazyServer
 
             var transferId = Guid.NewGuid().ToString();
 
-            // Send file offer
             var offerData = new
             {
                 TransferId = transferId,
@@ -514,7 +603,6 @@ namespace LazyServer
             var offerJson = JsonConvert.SerializeObject(offerData);
             await SendMessageInternal(MessageType.FileOffer, Encoding.UTF8.GetBytes(offerJson));
 
-            // For simplicity, assume file is accepted and start transfer
             await StreamFileInternal(filePath, transferId, metadata);
         }
 
@@ -543,7 +631,7 @@ namespace LazyServer
                     var read = await fileStream.ReadAsync(buffer, 0, bufferSize);
                     if (read == 0) break;
 
-                    var dataPacket = new byte[36 + read]; // GUID + data
+                    var dataPacket = new byte[36 + read];
                     Encoding.UTF8.GetBytes(transferId).CopyTo(dataPacket, 0);
                     Array.Copy(buffer, 0, dataPacket, 36, read);
 
@@ -609,7 +697,7 @@ namespace LazyServer
         }
     }
 
-    internal class ClientConnection
+    public class ClientConnection
     {
         public string Id { get; }
         public TcpClient TcpClient { get; }
@@ -617,11 +705,16 @@ namespace LazyServer
         public bool IsConnected => TcpClient?.Connected == true;
         public ConcurrentDictionary<string, FileTransfer> ActiveTransfers { get; } = new ConcurrentDictionary<string, FileTransfer>();
 
+        public DateTime ConnectedAt { get; }
+        public string RemoteEndPoint { get; }
+
         public ClientConnection(string id, TcpClient tcpClient, SslStream sslStream)
         {
             Id = id;
             TcpClient = tcpClient;
             SslStream = sslStream;
+            ConnectedAt = DateTime.UtcNow;
+            RemoteEndPoint = tcpClient.Client.RemoteEndPoint?.ToString() ?? "Unknown";
         }
 
         public void Disconnect()
@@ -635,9 +728,14 @@ namespace LazyServer
             SslStream?.Close();
             TcpClient?.Close();
         }
+
+        public override string ToString()
+        {
+            return $"ClientConnection[Id={Id}, Remote={RemoteEndPoint}, Connected={IsConnected}, Since={ConnectedAt:yyyy-MM-dd HH:mm:ss}]";
+        }
     }
 
-    internal class FileTransfer
+    public class FileTransfer
     {
         public string Id { get; set; }
         public string Metadata { get; set; }
@@ -646,7 +744,6 @@ namespace LazyServer
         public FileStream FileStream { get; set; }
     }
 
-    // Example usage class
     public static class LazyServerExample
     {
         public static async Task RunServerExample()
@@ -656,14 +753,55 @@ namespace LazyServer
             server.MessageReceived += (s, e) => Console.WriteLine($"Message from {e.ClientId}: {e.Message}");
             server.FileOfferReceived += (s, e) => Console.WriteLine($"File offer from {e.ClientId}: {e.Metadata}");
             server.FileOfferWithMetaReceived += (s, e) => Console.WriteLine($"File with bytes from {e.ClientId}: {e.FileRequest.Metadata} ({e.FileRequest.FileBytes.Length} bytes)");
-            server.ClientConnected += (s, clientId) => Console.WriteLine($"Client connected: {clientId}");
+
+            server.ClientConnected += (s, clientId) =>
+            {
+                Console.WriteLine($"Client connected: {clientId}");
+                var connection = server.GetConnectionById(clientId);
+                if (connection != null)
+                {
+                    Console.WriteLine($"Connection details: {connection}");
+                }
+            };
+
             server.ClientDisconnected += (s, clientId) => Console.WriteLine($"Client disconnected: {clientId}");
 
             await server.StartAsync(8888);
 
-            // Keep server running
-            Console.WriteLine("Server running. Press any key to stop...");
-            Console.ReadKey();
+            Console.WriteLine("Server running. Type 'list' to see connections, 'send <id> <message>' to send to specific client, or 'quit' to stop...");
+
+            string input;
+            while ((input = Console.ReadLine()) != "quit")
+            {
+                if (input == "list")
+                {
+                    Console.WriteLine($"Active connections ({server.GetConnectionCount()}):");
+                    foreach (var connectionId in server.GetAllConnectionIds())
+                    {
+                        var connection = server.GetConnectionById(connectionId);
+                        Console.WriteLine($"  {connection}");
+                    }
+                }
+                else if (input.StartsWith("send "))
+                {
+                    var parts = input.Split(new char[] { ' ' }, 3);
+                    if (parts.Length >= 3)
+                    {
+                        var targetId = parts[1];
+                        var message = parts[2];
+
+                        if (server.TryGetConnectionById(targetId, out var connection))
+                        {
+                            await server.SendMessageToConnection(connection, message);
+                            Console.WriteLine($"Message sent to {targetId}");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Connection {targetId} not found");
+                        }
+                    }
+                }
+            }
 
             server.Stop();
         }
@@ -673,22 +811,22 @@ namespace LazyServer
             var client = new LazyServerClient();
 
             client.MessageReceived += (s, e) => Console.WriteLine($"Server message: {e.Message}");
-            client.Connected += (s, e) => Console.WriteLine("Connected to server");
+            client.Connected += (s, e) => Console.WriteLine($"Connected to server with Connection ID: {client.ConnectionId}");
             client.FileCompleted += (s, e) => Console.WriteLine($"File transfer completed: {e.FileRequest.Metadata}");
 
             await client.ConnectAsync("localhost", 8888);
 
-            await client.SendMessage("Hello from client!");
+            await client.SendMessage($"Hello from client with ID: {client.ConnectionId}!");
 
-            // Send file from disk
-            await client.SendFile("test.txt", "{\"type\":\"text\",\"priority\":\"high\"}");
+            if (File.Exists("test.txt"))
+            {
+                await client.SendFile("test.txt", "{\"type\":\"text\",\"priority\":\"high\"}");
+            }
 
-            // Send file from bytes
             var fileBytes = Encoding.UTF8.GetBytes("This is file content from bytes!");
             await client.SendFileBytes(fileBytes, "{\"author\":\"LazyServer\",\"version\":\"1.0\",\"tags\":[\"test\",\"demo\"]}");
 
-            // Keep client running
-            Console.WriteLine("Client running. Press any key to disconnect...");
+            Console.WriteLine($"Client running with Connection ID: {client.ConnectionId}. Press any key to disconnect...");
             Console.ReadKey();
 
             client.Disconnect();

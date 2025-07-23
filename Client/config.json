@@ -1,0 +1,16 @@
+﻿{
+  "debug": true,
+
+  "server": "127.0.0.1",
+  "port": 6969,
+
+  "pastebin": false,
+  "pastebinlink": "",
+
+  "discord": false,
+  "webhook": "",
+
+  "telegram": false,
+  "tgid": -0,
+  "tgtoken": ""
+}
