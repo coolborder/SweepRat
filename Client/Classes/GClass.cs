@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -59,5 +61,11 @@ public class GClass
             }
         }
     }
-
+    public static async Task<string> GetIp()
+    {
+        var externalIpString = (await new HttpClient().GetStringAsync("http://icanhazip.com"))
+            .Replace("\\r\\n", "").Replace("\\n", "").Trim();
+        if (!IPAddress.TryParse(externalIpString, out var ipAddress)) return null;
+        return externalIpString;
+    }
 }

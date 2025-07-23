@@ -22,21 +22,19 @@ namespace Sweep
         private async void startbtn_Click(object sender, EventArgs e)
         {
             var server = new LazyServerHost();
-            await server.StartAsync(Int32.Parse(port.Text));
+            await server.StartAsync(int.Parse(port.Text));
+            Global.Port = int.Parse(port.Text);
 
-            var sweep = new Sweep.Forms.Sweep();
-            sweep.server = server;
+            var sweep = new Sweep.Forms.Sweep(server);
             this.Hide();
             sweep.Show();
             await Program.FadeIn(sweep);
 
-            System.Media.SoundPlayer player = new System.Media.SoundPlayer(@"./Sounds/Intro.wav");
+            var player = new System.Media.SoundPlayer(@"./Sounds/Intro.wav");
             player.Play();
 
-            sweep.FormClosing += (object sendere, FormClosingEventArgs ae) =>
-            {
-                Application.Exit();
-            };
+            sweep.FormClosing += (s, args) => Application.Exit();
         }
+
     }
 }

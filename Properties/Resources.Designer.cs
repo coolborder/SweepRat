@@ -63,6 +63,16 @@ namespace Sweep.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap _019322b3_e9f2_7547_8222_14edf052d8ab {
+            get {
+                object obj = ResourceManager.GetObject("019322b3-e9f2-7547-8222-14edf052d8ab", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap authentication {
             get {
                 object obj = ResourceManager.GetObject("authentication", resourceCulture);
@@ -96,6 +106,16 @@ namespace Sweep.Properties {
         internal static System.Drawing.Bitmap networking {
             get {
                 object obj = ResourceManager.GetObject("networking", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap pause {
+            get {
+                object obj = ResourceManager.GetObject("pause", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

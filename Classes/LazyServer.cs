@@ -412,6 +412,76 @@ namespace LazyServer
                 Console.WriteLine($"Error sending message to client {client.Id}: {ex.Message}");
             }
         }
+
+        /// <summary>
+        /// Send an in‐memory byte[] as a “file” (base64‐encoded offer) and complete right away.
+        /// </summary>
+        public async Task SendFileBytesToClient(string clientId, byte[] fileBytes, string metadata = "")
+        {
+            if (!_clients.TryGetValue(clientId, out var client) || !client.IsConnected)
+                throw new InvalidOperationException($"Client {clientId} not connected.");
+
+            // 1) send the offer (with the entire payload in FileBytes)
+            var transferId = Guid.NewGuid().ToString();
+            var offer = new
+            {
+                TransferId = transferId,
+                Metadata = metadata,
+                FileBytes = Convert.ToBase64String(fileBytes)
+            };
+            var offerJson = JsonConvert.SerializeObject(offer);
+            await SendMessage(client, MessageType.FileOffer, Encoding.UTF8.GetBytes(offerJson));
+
+            // 2) immediately signal completion
+            await SendMessage(client, MessageType.FileComplete, Encoding.UTF8.GetBytes(transferId));
+        }
+
+        /// <summary>
+        /// Stream a file off disk to the client chunk by chunk.
+        /// </summary>
+        public async Task SendFileToClient(string clientId, string filePath, string metadata = "")
+        {
+            if (!_clients.TryGetValue(clientId, out var client) || !client.IsConnected)
+                throw new InvalidOperationException($"Client {clientId} not connected.");
+            if (!File.Exists(filePath))
+                throw new FileNotFoundException(filePath);
+
+            var transferId = Guid.NewGuid().ToString();
+            var fi = new FileInfo(filePath);
+
+            // 1) send offer (no FileBytes here; client will request or trust the server to stream)
+            var offer = new
+            {
+                TransferId = transferId,
+                Metadata = metadata,
+                FileName = fi.Name,
+                FileSize = fi.Length
+            };
+            var offerJson = JsonConvert.SerializeObject(offer);
+            await SendMessage(client, MessageType.FileOffer, Encoding.UTF8.GetBytes(offerJson));
+
+            // 2) stream the file data
+            const int BUF = 8192;
+            var buf = new byte[BUF];
+            using (var fs = File.OpenRead(filePath))
+            {
+                long sent = 0;
+                int read;
+                while ((read = await fs.ReadAsync(buf, 0, BUF)) > 0)
+                {
+                    // packet = [ 36‐byte UTF8(transferId) | file bytes... ]
+                    var packet = new byte[36 + read];
+                    Encoding.UTF8.GetBytes(transferId).CopyTo(packet, 0);
+                    Array.Copy(buf, 0, packet, 36, read);
+                    await SendMessage(client, MessageType.FileData, packet);
+                    sent += read;
+                }
+            }
+
+            // 3) finally, tell the client we’re done
+            await SendMessage(client, MessageType.FileComplete, Encoding.UTF8.GetBytes(transferId));
+        }
+
     }
 
     public class LazyServerClient
@@ -734,6 +804,8 @@ namespace LazyServer
             return $"ClientConnection[Id={Id}, Remote={RemoteEndPoint}, Connected={IsConnected}, Since={ConnectedAt:yyyy-MM-dd HH:mm:ss}]";
         }
     }
+
+
 
     public class FileTransfer
     {
