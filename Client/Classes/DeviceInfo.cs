@@ -300,24 +300,30 @@ namespace PentestTools
             }
         }
 
-        public static byte[] Capture(Screen screen)
+        public static byte[] Capture(Screen screen, int jpegQuality = 100)
         {
             try
             {
-                Bitmap bitmap = CaptureMonitorWithCursor(screen);
-                if (bitmap == null)
+                Bitmap bmp = CaptureMonitorWithCursor(screen);
+                if (bmp == null)
                     return null;
 
-                using MemoryStream ms = new MemoryStream();
-                bitmap.Save(ms, System.Drawing.Imaging.ImageFormat.Jpeg);
-                bitmap.Dispose();
-                return ms.ToArray();
+                byte[] result = CompressScreenshot(bmp, jpegQuality);
+                bmp.Dispose();
+                return result;
             }
             catch
             {
                 return null;
             }
         }
+
+
+        private static ImageCodecInfo GetEncoder(ImageFormat format)
+        {
+            return ImageCodecInfo.GetImageDecoders().FirstOrDefault(c => c.FormatID == format.Guid);
+        }
+
 
 
         public static void DisposeScreenshot(string path)

