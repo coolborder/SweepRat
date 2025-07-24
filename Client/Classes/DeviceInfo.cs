@@ -2,6 +2,7 @@
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -10,6 +11,7 @@ using System.Management;
 using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -418,6 +420,5 @@ namespace PentestTools
             bmp.Save(ms, jpegCodec, encParams);
             return ms.ToArray();
         }
-
     }
 }

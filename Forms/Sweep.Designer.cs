@@ -33,19 +33,38 @@ namespace Sweep.Forms
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Sweep));
             this.rat = new Guna.UI2.WinForms.Guna2ContextMenuStrip();
+            this.seescreen = new System.Windows.Forms.ToolStripMenuItem();
+            this.webcam = new System.Windows.Forms.ToolStripMenuItem();
+            this.microphoneToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.pCSoundToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.chatToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.uACBypassToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.listView1 = new BrightIdeasSoftware.ObjectListView();
             this.portnum = new System.Windows.Forms.Label();
             this.clients = new System.Windows.Forms.Label();
-            this.seescreen = new System.Windows.Forms.ToolStripMenuItem();
+            this.logsview = new BrightIdeasSoftware.ObjectListView();
+            this.Time = ((BrightIdeasSoftware.OLVColumn)(new BrightIdeasSoftware.OLVColumn()));
+            this.Message = ((BrightIdeasSoftware.OLVColumn)(new BrightIdeasSoftware.OLVColumn()));
+            this.Type = ((BrightIdeasSoftware.OLVColumn)(new BrightIdeasSoftware.OLVColumn()));
+            this.counter = new Guna.UI2.WinForms.Guna2GradientButton();
+            this.builder = new Guna.UI2.WinForms.Guna2Button();
+            this.logs = new Guna.UI2.WinForms.Guna2Button();
+            this.home = new Guna.UI2.WinForms.Guna2Button();
             this.rat.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.listView1)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.logsview)).BeginInit();
             this.SuspendLayout();
             // 
             // rat
             // 
             this.rat.BackColor = System.Drawing.SystemColors.ControlLightLight;
             this.rat.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.seescreen});
+            this.seescreen,
+            this.webcam,
+            this.microphoneToolStripMenuItem,
+            this.pCSoundToolStripMenuItem,
+            this.chatToolStripMenuItem,
+            this.uACBypassToolStripMenuItem});
             this.rat.Name = "rat";
             this.rat.RenderStyle.ArrowColor = System.Drawing.Color.FromArgb(((int)(((byte)(151)))), ((int)(((byte)(143)))), ((int)(((byte)(255)))));
             this.rat.RenderStyle.BorderColor = System.Drawing.Color.Gainsboro;
@@ -56,7 +75,53 @@ namespace Sweep.Forms
             this.rat.RenderStyle.SelectionForeColor = System.Drawing.Color.White;
             this.rat.RenderStyle.SeparatorColor = System.Drawing.Color.Gainsboro;
             this.rat.RenderStyle.TextRenderingHint = System.Drawing.Text.TextRenderingHint.SystemDefault;
-            this.rat.Size = new System.Drawing.Size(181, 48);
+            this.rat.Size = new System.Drawing.Size(143, 136);
+            // 
+            // seescreen
+            // 
+            this.seescreen.Image = global::Sweep.Properties.Resources.desktop;
+            this.seescreen.Name = "seescreen";
+            this.seescreen.Size = new System.Drawing.Size(142, 22);
+            this.seescreen.Text = "See Screen";
+            this.seescreen.Click += new System.EventHandler(this.seescreen_Click);
+            // 
+            // webcam
+            // 
+            this.webcam.Image = global::Sweep.Properties.Resources.camera;
+            this.webcam.Name = "webcam";
+            this.webcam.Size = new System.Drawing.Size(142, 22);
+            this.webcam.Text = "See Webcam";
+            this.webcam.Click += new System.EventHandler(this.webcam_Click);
+            // 
+            // microphoneToolStripMenuItem
+            // 
+            this.microphoneToolStripMenuItem.Image = global::Sweep.Properties.Resources.microphone;
+            this.microphoneToolStripMenuItem.Name = "microphoneToolStripMenuItem";
+            this.microphoneToolStripMenuItem.Size = new System.Drawing.Size(142, 22);
+            this.microphoneToolStripMenuItem.Text = "Microphone";
+            this.microphoneToolStripMenuItem.Click += new System.EventHandler(this.microphoneToolStripMenuItem_Click);
+            // 
+            // pCSoundToolStripMenuItem
+            // 
+            this.pCSoundToolStripMenuItem.Image = global::Sweep.Properties.Resources.wave_sound;
+            this.pCSoundToolStripMenuItem.Name = "pCSoundToolStripMenuItem";
+            this.pCSoundToolStripMenuItem.Size = new System.Drawing.Size(142, 22);
+            this.pCSoundToolStripMenuItem.Text = "PC Sound";
+            // 
+            // chatToolStripMenuItem
+            // 
+            this.chatToolStripMenuItem.Image = global::Sweep.Properties.Resources.chat;
+            this.chatToolStripMenuItem.Name = "chatToolStripMenuItem";
+            this.chatToolStripMenuItem.Size = new System.Drawing.Size(142, 22);
+            this.chatToolStripMenuItem.Text = "Chat";
+            // 
+            // uACBypassToolStripMenuItem
+            // 
+            this.uACBypassToolStripMenuItem.Image = global::Sweep.Properties.Resources.icons8_windows_defender_96;
+            this.uACBypassToolStripMenuItem.Name = "uACBypassToolStripMenuItem";
+            this.uACBypassToolStripMenuItem.Size = new System.Drawing.Size(142, 22);
+            this.uACBypassToolStripMenuItem.Text = "UAC Bypass";
+            this.uACBypassToolStripMenuItem.Click += new System.EventHandler(this.uACBypassToolStripMenuItem_Click);
             // 
             // listView1
             // 
@@ -64,13 +129,14 @@ namespace Sweep.Forms
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.listView1.ContextMenuStrip = this.rat;
+            this.listView1.ForeColor = System.Drawing.SystemColors.WindowText;
             this.listView1.HideSelection = false;
-            this.listView1.Location = new System.Drawing.Point(47, 0);
+            this.listView1.Location = new System.Drawing.Point(4, 3);
             this.listView1.Name = "listView1";
             this.listView1.RowHeight = 25;
             this.listView1.SelectedColumnTint = System.Drawing.Color.FromArgb(((int)(((byte)(15)))), ((int)(((byte)(0)))), ((int)(((byte)(120)))), ((int)(((byte)(215)))));
             this.listView1.ShowGroups = false;
-            this.listView1.Size = new System.Drawing.Size(934, 447);
+            this.listView1.Size = new System.Drawing.Size(899, 455);
             this.listView1.TabIndex = 1;
             this.listView1.UseCompatibleStateImageBehavior = false;
             this.listView1.View = System.Windows.Forms.View.Details;
@@ -79,7 +145,7 @@ namespace Sweep.Forms
             // 
             this.portnum.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.portnum.AutoSize = true;
-            this.portnum.Location = new System.Drawing.Point(74, 452);
+            this.portnum.Location = new System.Drawing.Point(74, 462);
             this.portnum.Name = "portnum";
             this.portnum.Size = new System.Drawing.Size(54, 13);
             this.portnum.TabIndex = 2;
@@ -90,30 +156,154 @@ namespace Sweep.Forms
             // 
             this.clients.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.clients.AutoSize = true;
-            this.clients.Location = new System.Drawing.Point(4, 452);
+            this.clients.Location = new System.Drawing.Point(4, 462);
             this.clients.Name = "clients";
             this.clients.Size = new System.Drawing.Size(66, 13);
             this.clients.TabIndex = 3;
             this.clients.Text = "[ Clients %s ]";
             this.clients.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
-            // seescreen
+            // logsview
             // 
-            this.seescreen.Image = global::Sweep.Properties.Resources.desktop;
-            this.seescreen.Name = "seescreen";
-            this.seescreen.Size = new System.Drawing.Size(180, 22);
-            this.seescreen.Text = "See Screen";
-            this.seescreen.Click += new System.EventHandler(this.seescreen_Click);
+            this.logsview.AllColumns.Add(this.Time);
+            this.logsview.AllColumns.Add(this.Message);
+            this.logsview.AllColumns.Add(this.Type);
+            this.logsview.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.logsview.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+            this.Time,
+            this.Message,
+            this.Type});
+            this.logsview.FullRowSelect = true;
+            this.logsview.HideSelection = false;
+            this.logsview.Location = new System.Drawing.Point(4, 3);
+            this.logsview.Name = "logsview";
+            this.logsview.ShowGroups = false;
+            this.logsview.Size = new System.Drawing.Size(899, 455);
+            this.logsview.TabIndex = 7;
+            this.logsview.UseCompatibleStateImageBehavior = false;
+            this.logsview.View = System.Windows.Forms.View.Details;
+            // 
+            // Time
+            // 
+            this.Time.AspectName = "Time";
+            this.Time.CellPadding = null;
+            this.Time.Text = "Time";
+            this.Time.Width = 110;
+            // 
+            // Message
+            // 
+            this.Message.AspectName = "Message";
+            this.Message.CellPadding = null;
+            this.Message.FillsFreeSpace = true;
+            this.Message.Text = "Message";
+            this.Message.Width = 410;
+            // 
+            // Type
+            // 
+            this.Type.AspectName = "Type";
+            this.Type.CellPadding = null;
+            this.Type.Text = "Type";
+            // 
+            // counter
+            // 
+            this.counter.BorderRadius = 3;
+            this.counter.DisabledState.BorderColor = System.Drawing.Color.DarkGray;
+            this.counter.DisabledState.CustomBorderColor = System.Drawing.Color.DarkGray;
+            this.counter.DisabledState.FillColor = System.Drawing.Color.FromArgb(((int)(((byte)(169)))), ((int)(((byte)(169)))), ((int)(((byte)(169)))));
+            this.counter.DisabledState.FillColor2 = System.Drawing.Color.FromArgb(((int)(((byte)(169)))), ((int)(((byte)(169)))), ((int)(((byte)(169)))));
+            this.counter.DisabledState.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(141)))), ((int)(((byte)(141)))), ((int)(((byte)(141)))));
+            this.counter.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.counter.ForeColor = System.Drawing.Color.White;
+            this.counter.Location = new System.Drawing.Point(892, 46);
+            this.counter.Name = "counter";
+            this.counter.Size = new System.Drawing.Size(41, 21);
+            this.counter.TabIndex = 8;
+            this.counter.Text = "0";
+            this.counter.Visible = false;
+            // 
+            // builder
+            // 
+            this.builder.Anchor = System.Windows.Forms.AnchorStyles.Right;
+            this.builder.Animated = true;
+            this.builder.BorderColor = System.Drawing.Color.LightGray;
+            this.builder.BorderRadius = 3;
+            this.builder.BorderThickness = 1;
+            this.builder.DisabledState.BorderColor = System.Drawing.Color.DarkGray;
+            this.builder.DisabledState.CustomBorderColor = System.Drawing.Color.DarkGray;
+            this.builder.DisabledState.FillColor = System.Drawing.Color.FromArgb(((int)(((byte)(169)))), ((int)(((byte)(169)))), ((int)(((byte)(169)))));
+            this.builder.DisabledState.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(141)))), ((int)(((byte)(141)))), ((int)(((byte)(141)))));
+            this.builder.FillColor = System.Drawing.Color.White;
+            this.builder.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.builder.ForeColor = System.Drawing.Color.White;
+            this.builder.Image = global::Sweep.Properties.Resources.toolbox;
+            this.builder.ImageSize = new System.Drawing.Size(25, 25);
+            this.builder.Location = new System.Drawing.Point(908, 90);
+            this.builder.Name = "builder";
+            this.builder.PressedColor = System.Drawing.Color.Gainsboro;
+            this.builder.Size = new System.Drawing.Size(72, 40);
+            this.builder.TabIndex = 6;
+            // 
+            // logs
+            // 
+            this.logs.Anchor = System.Windows.Forms.AnchorStyles.Right;
+            this.logs.Animated = true;
+            this.logs.BorderColor = System.Drawing.Color.LightGray;
+            this.logs.BorderRadius = 3;
+            this.logs.BorderThickness = 1;
+            this.logs.DisabledState.BorderColor = System.Drawing.Color.DarkGray;
+            this.logs.DisabledState.CustomBorderColor = System.Drawing.Color.DarkGray;
+            this.logs.DisabledState.FillColor = System.Drawing.Color.FromArgb(((int)(((byte)(169)))), ((int)(((byte)(169)))), ((int)(((byte)(169)))));
+            this.logs.DisabledState.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(141)))), ((int)(((byte)(141)))), ((int)(((byte)(141)))));
+            this.logs.FillColor = System.Drawing.Color.White;
+            this.logs.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.logs.ForeColor = System.Drawing.Color.White;
+            this.logs.Image = global::Sweep.Properties.Resources.text_document;
+            this.logs.ImageSize = new System.Drawing.Size(25, 25);
+            this.logs.Location = new System.Drawing.Point(908, 46);
+            this.logs.Name = "logs";
+            this.logs.PressedColor = System.Drawing.Color.Gainsboro;
+            this.logs.Size = new System.Drawing.Size(72, 40);
+            this.logs.TabIndex = 5;
+            this.logs.Click += new System.EventHandler(this.logs_Click);
+            // 
+            // home
+            // 
+            this.home.Anchor = System.Windows.Forms.AnchorStyles.Right;
+            this.home.Animated = true;
+            this.home.BorderColor = System.Drawing.Color.LightGray;
+            this.home.BorderRadius = 3;
+            this.home.BorderThickness = 1;
+            this.home.DisabledState.BorderColor = System.Drawing.Color.DarkGray;
+            this.home.DisabledState.CustomBorderColor = System.Drawing.Color.DarkGray;
+            this.home.DisabledState.FillColor = System.Drawing.Color.FromArgb(((int)(((byte)(169)))), ((int)(((byte)(169)))), ((int)(((byte)(169)))));
+            this.home.DisabledState.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(141)))), ((int)(((byte)(141)))), ((int)(((byte)(141)))));
+            this.home.FillColor = System.Drawing.Color.White;
+            this.home.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.home.ForeColor = System.Drawing.Color.White;
+            this.home.Image = global::Sweep.Properties.Resources.house;
+            this.home.Location = new System.Drawing.Point(908, 3);
+            this.home.Name = "home";
+            this.home.PressedColor = System.Drawing.Color.Gainsboro;
+            this.home.Size = new System.Drawing.Size(72, 40);
+            this.home.TabIndex = 4;
+            this.home.Click += new System.EventHandler(this.home_Click);
             // 
             // Sweep
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.ClientSize = new System.Drawing.Size(981, 471);
+            this.ClientSize = new System.Drawing.Size(983, 481);
+            this.Controls.Add(this.counter);
+            this.Controls.Add(this.builder);
+            this.Controls.Add(this.logs);
+            this.Controls.Add(this.home);
             this.Controls.Add(this.clients);
             this.Controls.Add(this.portnum);
             this.Controls.Add(this.listView1);
+            this.Controls.Add(this.logsview);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "Sweep";
             this.Opacity = 0D;
@@ -122,6 +312,7 @@ namespace Sweep.Forms
             this.Load += new System.EventHandler(this.Sweep_Load);
             this.rat.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.listView1)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.logsview)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -133,5 +324,18 @@ namespace Sweep.Forms
         private BrightIdeasSoftware.ObjectListView listView1;
         private Label portnum;
         private Label clients;
+        private ToolStripMenuItem webcam;
+        private ToolStripMenuItem microphoneToolStripMenuItem;
+        private ToolStripMenuItem pCSoundToolStripMenuItem;
+        private ToolStripMenuItem chatToolStripMenuItem;
+        private ToolStripMenuItem uACBypassToolStripMenuItem;
+        private Guna.UI2.WinForms.Guna2Button home;
+        private Guna.UI2.WinForms.Guna2Button logs;
+        private Guna.UI2.WinForms.Guna2Button builder;
+        private BrightIdeasSoftware.ObjectListView logsview;
+        private BrightIdeasSoftware.OLVColumn Time;
+        private BrightIdeasSoftware.OLVColumn Message;
+        private BrightIdeasSoftware.OLVColumn Type;
+        private Guna.UI2.WinForms.Guna2GradientButton counter;
     }
 }
