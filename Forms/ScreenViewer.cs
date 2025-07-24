@@ -54,7 +54,7 @@ namespace Sweep.Forms
 
         private void ScreenViewer_FormClosing(object sender, FormClosingEventArgs e)
         {
-            Closing.Invoke();
+            Closing?.Invoke();
         }
 
         private void monitors_SelectedIndexChanged(object sender, EventArgs e)

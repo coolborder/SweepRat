@@ -24,6 +24,7 @@ namespace Sweep
             var server = new LazyServerHost();
             await server.StartAsync(int.Parse(port.Text));
             Global.Port = int.Parse(port.Text);
+            Global.Name = username.Text;
 
             var sweep = new Sweep.Forms.Sweep(server);
             this.Hide();

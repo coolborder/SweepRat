@@ -1,6 +1,6 @@
 ﻿{
   "debug": true,
-  "antivm": true,
+  "antivm": false,
 
   "server": "127.0.0.1",
   "port": 6969,
