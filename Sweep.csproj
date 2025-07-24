@@ -121,6 +121,12 @@
     <Compile Include="Classes\Extra\MessageHandler.cs" />
     <Compile Include="Classes\Global.cs" />
     <Compile Include="Classes\LazyServer.cs" />
+    <Compile Include="Forms\MicViewer.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\MicViewer.Designer.cs">
+      <DependentUpon>MicViewer.cs</DependentUpon>
+    </Compile>
     <Compile Include="Forms\ScreenViewer.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -147,6 +153,9 @@
       <DependentUpon>WebcamViewer.cs</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <EmbeddedResource Include="Forms\MicViewer.resx">
+      <DependentUpon>MicViewer.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Forms\ScreenViewer.resx">
       <DependentUpon>ScreenViewer.cs</DependentUpon>
     </EmbeddedResource>

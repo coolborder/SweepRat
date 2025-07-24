@@ -328,12 +328,16 @@ namespace Sweep.Services
 
         private void RemoveClientById(string clientId)
         {
-            var obj = _listView.Objects.Cast<ClientInfo>().FirstOrDefault(c => c.ID == clientId);
-            if (obj != null)
+            try
             {
-                _listView.RemoveObject(obj);
-                Console.WriteLine($"Client disconnected and removed: {clientId}");
+                var obj = _listView.Objects.Cast<ClientInfo>().FirstOrDefault(c => c.ID == clientId);
+                if (obj != null)
+                {
+                    _listView.RemoveObject(obj);
+                    Console.WriteLine($"Client disconnected and removed: {clientId}");
+                }
             }
+            catch {};
         }
     }
 }
