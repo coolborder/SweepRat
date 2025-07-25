@@ -25,7 +25,8 @@ namespace LazyServer
         FileReject = 0x04,
         FileData = 0x05,
         FileComplete = 0x06,
-        Handshake = 0x07
+        Handshake = 0x07,
+        Heartbeat = 0xFE
     }
 
     public class FileMetadata
@@ -490,6 +491,7 @@ namespace LazyServer
         private SslStream _sslStream;
         private bool _isConnected;
         private readonly ConcurrentDictionary<string, FileTransfer> _activeTransfers = new ConcurrentDictionary<string, FileTransfer>();
+        public bool IsConnected => _isConnected && _tcpClient?.Connected == true;
 
         public string ConnectionId { get; private set; }
 
@@ -500,6 +502,20 @@ namespace LazyServer
         public event EventHandler<FileCompletedEventArgs> FileCompleted;
         public event EventHandler Connected;
         public event EventHandler Disconnected;
+        public async Task SendHeartbeat(byte[] payload = null)
+        {
+            if (!_isConnected) return;
+
+            payload ??= System.Text.Encoding.UTF8.GetBytes("ping");
+
+            var message = new byte[5 + payload.Length];
+            message[0] = (byte)MessageType.Heartbeat;
+            BitConverter.GetBytes(payload.Length).CopyTo(message, 1);
+            payload.CopyTo(message, 5);
+
+            await _sslStream.WriteAsync(message, 0, message.Length);
+            await _sslStream.FlushAsync();
+        }
 
         public async Task ConnectAsync(string hostname = "localhost", int port = 8888)
         {

