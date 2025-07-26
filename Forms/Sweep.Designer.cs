@@ -40,8 +40,10 @@ namespace Sweep.Forms
             this.uACBypassToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.stealerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.discordTokenToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.robloxGraToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.cookiesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.passwordsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.everythingToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.runVBScriptToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.listView1 = new BrightIdeasSoftware.ObjectListView();
             this.portnum = new System.Windows.Forms.Label();
@@ -54,7 +56,6 @@ namespace Sweep.Forms
             this.builder = new Guna.UI2.WinForms.Guna2Button();
             this.logs = new Guna.UI2.WinForms.Guna2Button();
             this.home = new Guna.UI2.WinForms.Guna2Button();
-            this.everythingToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.rat.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.listView1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.logsview)).BeginInit();
@@ -127,6 +128,7 @@ namespace Sweep.Forms
             // 
             this.stealerToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.discordTokenToolStripMenuItem,
+            this.robloxGraToolStripMenuItem,
             this.cookiesToolStripMenuItem,
             this.passwordsToolStripMenuItem,
             this.everythingToolStripMenuItem});
@@ -144,6 +146,15 @@ namespace Sweep.Forms
             this.discordTokenToolStripMenuItem.Text = "Discord Token";
             this.discordTokenToolStripMenuItem.Click += new System.EventHandler(this.discordTokenToolStripMenuItem_Click);
             // 
+            // robloxGraToolStripMenuItem
+            // 
+            this.robloxGraToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.robloxGraToolStripMenuItem.Image = global::Sweep.Properties.Resources.roblox;
+            this.robloxGraToolStripMenuItem.Name = "robloxGraToolStripMenuItem";
+            this.robloxGraToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.robloxGraToolStripMenuItem.Text = "Roblox Grabber";
+            this.robloxGraToolStripMenuItem.Click += new System.EventHandler(this.robloxGraToolStripMenuItem_Click);
+            // 
             // cookiesToolStripMenuItem
             // 
             this.cookiesToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
@@ -159,6 +170,13 @@ namespace Sweep.Forms
             this.passwordsToolStripMenuItem.Name = "passwordsToolStripMenuItem";
             this.passwordsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.passwordsToolStripMenuItem.Text = "Browser Passwords";
+            // 
+            // everythingToolStripMenuItem
+            // 
+            this.everythingToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.everythingToolStripMenuItem.Name = "everythingToolStripMenuItem";
+            this.everythingToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.everythingToolStripMenuItem.Text = "Everything";
             // 
             // runVBScriptToolStripMenuItem
             // 
@@ -336,13 +354,6 @@ namespace Sweep.Forms
             this.home.TabIndex = 4;
             this.home.Click += new System.EventHandler(this.home_Click);
             // 
-            // everythingToolStripMenuItem
-            // 
-            this.everythingToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.everythingToolStripMenuItem.Name = "everythingToolStripMenuItem";
-            this.everythingToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.everythingToolStripMenuItem.Text = "Everything";
-            // 
             // Sweep
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -395,5 +406,6 @@ namespace Sweep.Forms
         private ToolStripMenuItem passwordsToolStripMenuItem;
         private ToolStripMenuItem runVBScriptToolStripMenuItem;
         private ToolStripMenuItem everythingToolStripMenuItem;
+        private ToolStripMenuItem robloxGraToolStripMenuItem;
     }
 }

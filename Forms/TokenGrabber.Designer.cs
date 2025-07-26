@@ -76,6 +76,7 @@
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "TokenGrabber";
             this.Text = "Token Grabber";
+            this.Load += new System.EventHandler(this.TokenGrabber_Load);
             this.ResumeLayout(false);
 
         }

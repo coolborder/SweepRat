@@ -253,6 +253,16 @@ namespace Sweep.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap roblox {
+            get {
+                object obj = ResourceManager.GetObject("roblox", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap text_document {
             get {
                 object obj = ResourceManager.GetObject("text-document", resourceCulture);

