@@ -8,6 +8,8 @@ using Sweep.Models;
 using Sweep.Services;    // MessageHandler
 using Sweep.UI;          // ListViewConfigurator
 using Microsoft.VisualBasic;
+using System.Threading.Tasks;
+using System.Security.Cryptography;
 
 namespace Sweep.Forms
 {
@@ -48,6 +50,7 @@ namespace Sweep.Forms
                 counter.Text = logsnum.ToString();
                 counter.Visible = logsnum > 0;
             };
+            usname.Text = usname.Text.Replace("%s", Global.Name);
         }
 
         private async void seescreen_Click(object sender, EventArgs e)
@@ -77,8 +80,7 @@ namespace Sweep.Forms
             foreach (var obj in listView1.SelectedObjects)
             {
                 ClientInfo item = (ClientInfo)obj;
-                if (item == null) { return; }
-                ;
+                if (item == null) { return; };
 
                 ClientConnection conn = _server.GetConnectionById(item.ID);
                 if (conn != null)
@@ -110,8 +112,7 @@ namespace Sweep.Forms
             foreach (var obj in listView1.SelectedObjects)
             {
                 ClientInfo item = (ClientInfo)obj;
-                if (item == null) { return; }
-                ;
+                if (item == null) { return; };
 
                 ClientConnection conn = _server.GetConnectionById(item.ID);
                 if (conn != null)
@@ -131,8 +132,7 @@ namespace Sweep.Forms
             foreach (var obj in listView1.SelectedObjects)
             {
                 ClientInfo item = (ClientInfo)obj;
-                if (item == null) { return; }
-                ;
+                if (item == null) { return; };
 
                 ClientConnection conn = _server.GetConnectionById(item.ID);
                 if (conn != null)
@@ -151,8 +151,7 @@ namespace Sweep.Forms
             foreach (var obj in listView1.SelectedObjects)
             {
                 ClientInfo item = (ClientInfo)obj;
-                if (item == null) { return; }
-                ;
+                if (item == null) { return; };
 
                 ClientConnection conn = _server.GetConnectionById(item.ID);
                 if (conn != null)
@@ -177,8 +176,7 @@ namespace Sweep.Forms
             foreach (var obj in listView1.SelectedObjects)
             {
                 ClientInfo item = (ClientInfo)obj;
-                if (item == null) { return; }
-                ;
+                if (item == null) { return; };
 
                 ClientConnection conn = _server.GetConnectionById(item.ID);
                 if (conn != null)
@@ -196,8 +194,7 @@ namespace Sweep.Forms
             foreach (var obj in listView1.SelectedObjects)
             {
                 ClientInfo item = (ClientInfo)obj;
-                if (item == null) { return; }
-                ;
+                if (item == null) { return; };
 
                 ClientConnection conn = _server.GetConnectionById(item.ID);
                 if (conn != null)
@@ -215,8 +212,7 @@ namespace Sweep.Forms
             foreach (var obj in listView1.SelectedObjects)
             {
                 ClientInfo item = (ClientInfo)obj;
-                if (item == null) { return; }
-                ;
+                if (item == null) { return; };
 
                 ClientConnection conn = _server.GetConnectionById(item.ID);
                 if (conn != null)
@@ -228,6 +224,40 @@ namespace Sweep.Forms
                     f.Show();
                 }
             }
+        }
+
+        private async void builder_Click(object sender, EventArgs e)
+        {
+            var f = new Builder();
+            f.Opacity = 0;
+            f.Show();
+            await Program.FadeIn(f, 35);
+        }
+
+        protected override void OnDeactivate(EventArgs e)
+        {
+            timer1.Start();
+            
+            base.OnDeactivate(e);
+        }
+
+        protected override void OnActivated(EventArgs e)
+        {
+            timer1.Stop();
+            opacity = 1;
+            
+            this.Opacity = 1;
+            base.OnActivated(e);
+        }
+        private static double opacity = 0.95;
+        private void timer1_Tick(object sender, EventArgs e)
+        {
+            timer1.Interval = new Random().Next(1000, 10000);
+            opacity -= 0.05;
+            if (opacity < 0.8) {
+                opacity = 0.8;
+            }
+            this.Opacity = opacity;
         }
     }
 

@@ -135,6 +135,7 @@
     <Compile Include="Classes\Extra\ListViewConfigurator.cs" />
     <Compile Include="Classes\Extra\Log.cs" />
     <Compile Include="Classes\Extra\MessageHandler.cs" />
+    <Compile Include="Classes\Extra\Remembrance.cs" />
     <Compile Include="Classes\Global.cs" />
     <Compile Include="Classes\LazyServer.cs" />
     <Compile Include="Forms\Builder.cs">
@@ -323,6 +324,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\roblox.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\exclamation-mark.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

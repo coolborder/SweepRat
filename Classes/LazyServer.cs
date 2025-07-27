@@ -26,7 +26,11 @@ namespace LazyServer
         FileData = 0x05,
         FileComplete = 0x06,
         Handshake = 0x07,
-        Heartbeat = 0xFE
+        Heartbeat = 0xFE,
+        UdpInit = 0x08,
+        UdpAck = 0x09,
+        UdpFileChunk = 0x0A,
+        UdpFileComplete = 0x0B
     }
 
     public class FileMetadata
@@ -81,13 +85,39 @@ namespace LazyServer
         public bool Success { get; set; }
     }
 
+    public class UdpFileChunk
+    {
+        public string TransferId { get; set; }
+        public int ChunkIndex { get; set; }
+        public int TotalChunks { get; set; }
+        public byte[] Data { get; set; }
+        public bool IsLast { get; set; }
+    }
+
+    public class UdpFileTransfer
+    {
+        public string TransferId { get; set; }
+        public string ClientId { get; set; }
+        public IPEndPoint ClientEndPoint { get; set; }
+        public Dictionary<int, byte[]> ReceivedChunks { get; set; } = new Dictionary<int, byte[]>();
+        public int TotalChunks { get; set; }
+        public long TotalBytes { get; set; }
+        public long ReceivedBytes { get; set; }
+        public DateTime LastActivity { get; set; } = DateTime.UtcNow;
+        public string Metadata { get; set; }
+        public HashSet<int> AckedChunks { get; set; } = new HashSet<int>();
+    }
+
     public class LazyServerHost
     {
         private TcpListener _listener;
+        private UdpClient _udpListener;
         private X509Certificate2 _serverCertificate;
         private readonly ConcurrentDictionary<string, ClientConnection> _clients = new ConcurrentDictionary<string, ClientConnection>();
+        private readonly ConcurrentDictionary<string, UdpFileTransfer> _udpTransfers = new ConcurrentDictionary<string, UdpFileTransfer>();
         private CancellationTokenSource _cancellationToken;
         private bool _isRunning;
+        private int _udpPort;
 
         public event EventHandler<MessageEventArgs> MessageReceived;
         public event EventHandler<FileOfferEventArgs> FileOfferReceived;
@@ -128,17 +158,24 @@ namespace LazyServer
             return _clients.TryGetValue(connectionId, out var connection) && connection.IsConnected;
         }
 
-        public async Task StartAsync(int port = 8888)
+        public async Task StartAsync(int port = 8888, int udpPort = 8889)
         {
             GenerateTemporaryCertificate();
             _listener = new TcpListener(IPAddress.Any, port);
             _listener.Start();
+
+            _udpPort = udpPort;
+            _udpListener = new UdpClient(udpPort);
+
             _cancellationToken = new CancellationTokenSource();
             _isRunning = true;
 
-            Console.WriteLine($"LazyServer started on port {port}");
+            Console.WriteLine($"LazyServer started on TCP port {port} and UDP port {udpPort}");
 
             _ = Task.Run(AcceptClientsAsync);
+            _ = Task.Run(HandleUdpPacketsAsync);
+            _ = Task.Run(CleanupExpiredTransfersAsync);
+
             await Task.CompletedTask;
         }
 
@@ -147,15 +184,232 @@ namespace LazyServer
             _isRunning = false;
             _cancellationToken?.Cancel();
             _listener?.Stop();
+            _udpListener?.Close();
 
             foreach (var client in _clients.Values)
             {
                 client.Disconnect();
             }
             _clients.Clear();
+            _udpTransfers.Clear();
 
             _serverCertificate?.Dispose();
             Console.WriteLine("LazyServer stopped");
+        }
+
+        private async Task HandleUdpPacketsAsync()
+        {
+            while (_isRunning && !_cancellationToken.Token.IsCancellationRequested)
+            {
+                try
+                {
+                    var result = await _udpListener.ReceiveAsync();
+                    _ = Task.Run(() => ProcessUdpPacket(result.Buffer, result.RemoteEndPoint));
+                }
+                catch (ObjectDisposedException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"UDP error: {ex.Message}");
+                }
+            }
+        }
+
+        private async Task ProcessUdpPacket(byte[] data, IPEndPoint remoteEndPoint)
+        {
+            try
+            {
+                if (data.Length < 1) return;
+
+                var messageType = (MessageType)data[0];
+
+                switch (messageType)
+                {
+                    case MessageType.UdpInit:
+                        await HandleUdpInit(data, remoteEndPoint);
+                        break;
+
+                    case MessageType.UdpFileChunk:
+                        await HandleUdpFileChunk(data, remoteEndPoint);
+                        break;
+
+                    case MessageType.UdpFileComplete:
+                        await HandleUdpFileComplete(data, remoteEndPoint);
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error processing UDP packet: {ex.Message}");
+            }
+        }
+
+        private async Task HandleUdpInit(byte[] data, IPEndPoint remoteEndPoint)
+        {
+            if (data.Length < 37) return; // 1 byte type + 36 bytes transferId
+
+            var transferId = Encoding.UTF8.GetString(data, 1, 36);
+            var clientId = data.Length > 37 ? Encoding.UTF8.GetString(data, 37, data.Length - 37) : null;
+
+            if (!string.IsNullOrEmpty(clientId) && _clients.ContainsKey(clientId))
+            {
+                var transfer = new UdpFileTransfer
+                {
+                    TransferId = transferId,
+                    ClientId = clientId,
+                    ClientEndPoint = remoteEndPoint
+                };
+
+                _udpTransfers.TryAdd(transferId, transfer);
+
+                // Send ACK back
+                var ackData = new byte[37];
+                ackData[0] = (byte)MessageType.UdpAck;
+                Encoding.UTF8.GetBytes(transferId).CopyTo(ackData, 1);
+
+                await _udpListener.SendAsync(ackData, ackData.Length, remoteEndPoint);
+                Console.WriteLine($"UDP initialized for transfer {transferId} from {clientId}");
+            }
+        }
+
+        private async Task HandleUdpFileChunk(byte[] data, IPEndPoint remoteEndPoint)
+        {
+            try
+            {
+                // Parse: [1 byte type][36 bytes transferId][4 bytes chunkIndex][4 bytes totalChunks][1 byte isLast][remaining data]
+                if (data.Length < 46) return;
+
+                var transferId = Encoding.UTF8.GetString(data, 1, 36);
+                var chunkIndex = BitConverter.ToInt32(data, 37);
+                var totalChunks = BitConverter.ToInt32(data, 41);
+                var isLast = data[45] == 1;
+                var chunkData = new byte[data.Length - 46];
+                Array.Copy(data, 46, chunkData, 0, chunkData.Length);
+
+                if (_udpTransfers.TryGetValue(transferId, out var transfer))
+                {
+                    transfer.LastActivity = DateTime.UtcNow;
+                    transfer.ReceivedChunks[chunkIndex] = chunkData;
+                    transfer.TotalChunks = totalChunks;
+                    transfer.ReceivedBytes += chunkData.Length;
+
+                    // Send ACK for this chunk
+                    var ackData = new byte[41];
+                    ackData[0] = (byte)MessageType.UdpAck;
+                    Encoding.UTF8.GetBytes(transferId).CopyTo(ackData, 1);
+                    BitConverter.GetBytes(chunkIndex).CopyTo(ackData, 37);
+
+                    await _udpListener.SendAsync(ackData, ackData.Length, remoteEndPoint);
+                    transfer.AckedChunks.Add(chunkIndex);
+
+                    // Fire progress event
+                    var fileRequest = new FileRequest
+                    {
+                        TransferId = transferId,
+                        FileBytes = chunkData,
+                        Metadata = transfer.Metadata
+                    };
+
+                    FileProgress?.Invoke(this, new FileProgressEventArgs
+                    {
+                        ClientId = transfer.ClientId,
+                        TransferId = transferId,
+                        BytesTransferred = transfer.ReceivedBytes,
+                        TotalBytes = transfer.TotalBytes,
+                        FileRequest = fileRequest
+                    });
+
+                    // Check if transfer is complete
+                    if (transfer.ReceivedChunks.Count == totalChunks && isLast)
+                    {
+                        await CompleteUdpFileTransfer(transferId, transfer);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error handling UDP file chunk: {ex.Message}");
+            }
+        }
+
+        private async Task HandleUdpFileComplete(byte[] data, IPEndPoint remoteEndPoint)
+        {
+            if (data.Length < 37) return;
+
+            var transferId = Encoding.UTF8.GetString(data, 1, 36);
+
+            if (_udpTransfers.TryGetValue(transferId, out var transfer))
+            {
+                await CompleteUdpFileTransfer(transferId, transfer);
+            }
+        }
+
+        private async Task CompleteUdpFileTransfer(string transferId, UdpFileTransfer transfer)
+        {
+            try
+            {
+                // Reconstruct the complete file
+                var completeFile = new List<byte>();
+                for (int i = 0; i < transfer.TotalChunks; i++)
+                {
+                    if (transfer.ReceivedChunks.TryGetValue(i, out var chunk))
+                    {
+                        completeFile.AddRange(chunk);
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Missing chunk {i} for transfer {transferId}");
+                        return;
+                    }
+                }
+
+                var fileRequest = new FileRequest
+                {
+                    TransferId = transferId,
+                    FileBytes = completeFile.ToArray(),
+                    Metadata = transfer.Metadata
+                };
+
+                FileCompleted?.Invoke(this, new FileCompletedEventArgs
+                {
+                    ClientId = transfer.ClientId,
+                    FileRequest = fileRequest,
+                    Success = true
+                });
+
+                _udpTransfers.TryRemove(transferId, out _);
+                Console.WriteLine($"UDP file transfer completed: {transferId} ({completeFile.Count} bytes)");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error completing UDP transfer: {ex.Message}");
+            }
+        }
+
+        private async Task CleanupExpiredTransfersAsync()
+        {
+            while (_isRunning)
+            {
+                try
+                {
+                    var expired = _udpTransfers.Where(t =>
+                        DateTime.UtcNow - t.Value.LastActivity > TimeSpan.FromMinutes(5)).ToList();
+
+                    foreach (var transfer in expired)
+                    {
+                        _udpTransfers.TryRemove(transfer.Key, out _);
+                        Console.WriteLine($"Cleaned up expired transfer: {transfer.Key}");
+                    }
+
+                    await Task.Delay(TimeSpan.FromMinutes(1), _cancellationToken.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+            }
         }
 
         private void GenerateTemporaryCertificate()
@@ -225,6 +479,7 @@ namespace LazyServer
                     checkCertificateRevocation: false);
 
                 client = new ClientConnection(clientId, tcpClient, sslStream);
+                client.UdpPort = _udpPort; // Set UDP port info
                 _clients.TryAdd(clientId, client);
 
                 ClientConnected?.Invoke(this, clientId);
@@ -320,6 +575,13 @@ namespace LazyServer
                     }
                     else
                     {
+                        // Setup UDP transfer tracking
+                        if (_udpTransfers.ContainsKey(transferId))
+                        {
+                            _udpTransfers[transferId].Metadata = metadata;
+                            _udpTransfers[transferId].ClientId = client.Id;
+                        }
+
                         FileOfferReceived?.Invoke(this, new FileOfferEventArgs
                         {
                             ClientId = client.Id,
@@ -415,7 +677,7 @@ namespace LazyServer
         }
 
         /// <summary>
-        /// Send an in‐memory byte[] as a “file” (base64‐encoded offer) and complete right away.
+        /// Send an in‐memory byte[] as a "file" (base64‐encoded offer) and complete right away.
         /// </summary>
         public async Task SendFileBytesToClient(string clientId, byte[] fileBytes, string metadata = "")
         {
@@ -438,61 +700,90 @@ namespace LazyServer
         }
 
         /// <summary>
-        /// Stream a file off disk to the client chunk by chunk.
+        /// Stream a file to client using UDP for better performance
         /// </summary>
-        public async Task SendFileToClient(string clientId, string filePath, string metadata = "")
+        public async Task SendFileToClientUdp(string clientId, byte[] fileBytes, string metadata = "")
         {
             if (!_clients.TryGetValue(clientId, out var client) || !client.IsConnected)
                 throw new InvalidOperationException($"Client {clientId} not connected.");
-            if (!File.Exists(filePath))
-                throw new FileNotFoundException(filePath);
 
             var transferId = Guid.NewGuid().ToString();
-            var fi = new FileInfo(filePath);
 
-            // 1) send offer (no FileBytes here; client will request or trust the server to stream)
+            // 1) Send file offer via TCP
             var offer = new
             {
                 TransferId = transferId,
                 Metadata = metadata,
-                FileName = fi.Name,
-                FileSize = fi.Length
+                FileSize = fileBytes.Length,
+                UseUdp = true,
+                UdpPort = _udpPort
             };
             var offerJson = JsonConvert.SerializeObject(offer);
             await SendMessage(client, MessageType.FileOffer, Encoding.UTF8.GetBytes(offerJson));
 
-            // 2) stream the file data
-            const int BUF = 8192;
-            var buf = new byte[BUF];
-            using (var fs = File.OpenRead(filePath))
-            {
-                long sent = 0;
-                int read;
-                while ((read = await fs.ReadAsync(buf, 0, BUF)) > 0)
-                {
-                    // packet = [ 36‐byte UTF8(transferId) | file bytes... ]
-                    var packet = new byte[36 + read];
-                    Encoding.UTF8.GetBytes(transferId).CopyTo(packet, 0);
-                    Array.Copy(buf, 0, packet, 36, read);
-                    await SendMessage(client, MessageType.FileData, packet);
-                    sent += read;
-                }
-            }
+            // 2) Wait a bit for UDP initialization (in a real implementation, wait for client ACK)
+            await Task.Delay(100);
 
-            // 3) finally, tell the client we’re done
-            await SendMessage(client, MessageType.FileComplete, Encoding.UTF8.GetBytes(transferId));
+            // 3) Send file via UDP chunks
+            await SendFileViaUdp(transferId, fileBytes, client.TcpClient.Client.RemoteEndPoint as IPEndPoint);
         }
 
+        private async Task SendFileViaUdp(string transferId, byte[] fileBytes, IPEndPoint clientEndPoint)
+        {
+            const int CHUNK_SIZE = 1400; // Safe UDP packet size
+            var totalChunks = (int)Math.Ceiling((double)fileBytes.Length / CHUNK_SIZE);
+
+            for (int i = 0; i < totalChunks; i++)
+            {
+                var chunkStart = i * CHUNK_SIZE;
+                var chunkSize = Math.Min(CHUNK_SIZE, fileBytes.Length - chunkStart);
+                var chunkData = new byte[chunkSize];
+                Array.Copy(fileBytes, chunkStart, chunkData, 0, chunkSize);
+
+                // Create UDP packet: [1 byte type][36 bytes transferId][4 bytes chunkIndex][4 bytes totalChunks][1 byte isLast][data]
+                var packet = new byte[46 + chunkSize];
+                packet[0] = (byte)MessageType.UdpFileChunk;
+                Encoding.UTF8.GetBytes(transferId).CopyTo(packet, 1);
+                BitConverter.GetBytes(i).CopyTo(packet, 37);
+                BitConverter.GetBytes(totalChunks).CopyTo(packet, 41);
+                packet[45] = (byte)(i == totalChunks - 1 ? 1 : 0);
+                chunkData.CopyTo(packet, 46);
+
+                await _udpListener.SendAsync(packet, packet.Length, clientEndPoint);
+
+                // Small delay to prevent overwhelming
+                if (i % 10 == 0)
+                    await Task.Delay(1);
+            }
+
+            Console.WriteLine($"Sent {totalChunks} UDP chunks for transfer {transferId}");
+        }
+
+        /// <summary>
+        /// Stream a file off disk to the client via UDP.
+        /// </summary>
+        public async Task SendFileToClient(string clientId, string filePath, string metadata = "")
+        {
+            if (!File.Exists(filePath))
+                throw new FileNotFoundException(filePath);
+
+            var fileBytes = await FileHelper.ReadAllBytesAsync(filePath);
+            await SendFileToClientUdp(clientId, fileBytes, metadata);
+        }
     }
 
     public class LazyServerClient
     {
         private TcpClient _tcpClient;
         private SslStream _sslStream;
+        private UdpClient _udpClient;
         private bool _isConnected;
         private readonly ConcurrentDictionary<string, FileTransfer> _activeTransfers = new ConcurrentDictionary<string, FileTransfer>();
-        public bool IsConnected => _isConnected && _tcpClient?.Connected == true;
+        private readonly ConcurrentDictionary<string, UdpFileTransfer> _udpTransfers = new ConcurrentDictionary<string, UdpFileTransfer>();
+        private string _serverHostname;
+        private int _serverUdpPort;
 
+        public bool IsConnected => _isConnected && _tcpClient?.Connected == true;
         public string ConnectionId { get; private set; }
 
         public event EventHandler<MessageEventArgs> MessageReceived;
@@ -502,6 +793,7 @@ namespace LazyServer
         public event EventHandler<FileCompletedEventArgs> FileCompleted;
         public event EventHandler Connected;
         public event EventHandler Disconnected;
+
         public async Task SendHeartbeat(byte[] payload = null)
         {
             if (!_isConnected) return;
@@ -517,10 +809,13 @@ namespace LazyServer
             await _sslStream.FlushAsync();
         }
 
-        public async Task ConnectAsync(string hostname = "localhost", int port = 8888)
+        public async Task ConnectAsync(string hostname = "localhost", int port = 8888, int udpPort = 8889)
         {
             try
             {
+                _serverHostname = hostname;
+                _serverUdpPort = udpPort;
+
                 _tcpClient = new TcpClient();
                 await _tcpClient.ConnectAsync(hostname, port);
 
@@ -535,19 +830,214 @@ namespace LazyServer
                     false                                       // Don't check certificate revocation
                 );
 
+                // Initialize UDP client with automatic port binding
+                _udpClient = new UdpClient(0); // 0 = let OS choose available port
+
                 _isConnected = true;
                 ConnectionId = Guid.NewGuid().ToString();
 
                 Connected?.Invoke(this, EventArgs.Empty);
-                Console.WriteLine($"Connected to LazyServer at {hostname}:{port} with Connection ID: {ConnectionId}");
+                Console.WriteLine($"Connected to LazyServer at {hostname}:{port} (UDP: {udpPort}) with Connection ID: {ConnectionId}");
 
                 _ = Task.Run(ReceiveMessagesAsync);
+                _ = Task.Run(HandleUdpPacketsAsync);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Connection failed: {ex.Message}");
                 Console.WriteLine($"Stack trace: {ex.StackTrace}");
                 throw;
+            }
+        }
+
+        private async Task HandleUdpPacketsAsync()
+        {
+            while (_isConnected)
+            {
+                try
+                {
+                    if (_udpClient == null) break;
+
+                    var result = await _udpClient.ReceiveAsync();
+                    _ = Task.Run(() => ProcessUdpPacket(result.Buffer, result.RemoteEndPoint));
+                }
+                catch (ObjectDisposedException)
+                {
+                    // UDP client was disposed, exit gracefully
+                    break;
+                }
+                catch (SocketException ex) when (ex.SocketErrorCode == SocketError.Interrupted ||
+                                                ex.SocketErrorCode == SocketError.NotSocket)
+                {
+                    // Socket was closed, exit gracefully
+                    break;
+                }
+                catch (InvalidOperationException ex) when (ex.Message.Contains("Bind"))
+                {
+                    // UDP client not properly bound, try to reinitialize
+                    Console.WriteLine("UDP client binding issue, reinitializing...");
+                    try
+                    {
+                        _udpClient?.Close();
+                        _udpClient = new UdpClient(0);
+                    }
+                    catch
+                    {
+                        // If reinitializing fails, exit the loop
+                        break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"UDP receive error: {ex.Message}");
+                    // Add a small delay to prevent tight error loops
+                    await Task.Delay(100);
+                }
+            }
+        }
+
+        private async Task ProcessUdpPacket(byte[] data, IPEndPoint remoteEndPoint)
+        {
+            try
+            {
+                if (data.Length < 1) return;
+
+                var messageType = (MessageType)data[0];
+
+                switch (messageType)
+                {
+                    case MessageType.UdpAck:
+                        await HandleUdpAck(data);
+                        break;
+
+                    case MessageType.UdpFileChunk:
+                        await HandleUdpFileChunk(data);
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error processing UDP packet: {ex.Message}");
+            }
+        }
+
+        private async Task HandleUdpAck(byte[] data)
+        {
+            if (data.Length >= 37) // transferId ACK
+            {
+                var transferId = Encoding.UTF8.GetString(data, 1, 36);
+                Console.WriteLine($"Received UDP ACK for transfer: {transferId}");
+            }
+            else if (data.Length >= 41) // chunk ACK
+            {
+                var transferId = Encoding.UTF8.GetString(data, 1, 36);
+                var chunkIndex = BitConverter.ToInt32(data, 37);
+                Console.WriteLine($"Received chunk ACK for transfer {transferId}, chunk {chunkIndex}");
+            }
+        }
+
+        private async Task HandleUdpFileChunk(byte[] data)
+        {
+            try
+            {
+                if (data.Length < 46) return;
+
+                var transferId = Encoding.UTF8.GetString(data, 1, 36);
+                var chunkIndex = BitConverter.ToInt32(data, 37);
+                var totalChunks = BitConverter.ToInt32(data, 41);
+                var isLast = data[45] == 1;
+                var chunkData = new byte[data.Length - 46];
+                Array.Copy(data, 46, chunkData, 0, chunkData.Length);
+
+                if (!_udpTransfers.TryGetValue(transferId, out var transfer))
+                {
+                    transfer = new UdpFileTransfer
+                    {
+                        TransferId = transferId,
+                        TotalChunks = totalChunks
+                    };
+                    _udpTransfers.TryAdd(transferId, transfer);
+                }
+
+                transfer.ReceivedChunks[chunkIndex] = chunkData;
+                transfer.ReceivedBytes += chunkData.Length;
+                transfer.LastActivity = DateTime.UtcNow;
+
+                // Send ACK back to sender
+                var serverEndPoint = new IPEndPoint(IPAddress.Parse(_serverHostname == "localhost" ? "127.0.0.1" : _serverHostname), _serverUdpPort);
+                var ackData = new byte[41];
+                ackData[0] = (byte)MessageType.UdpAck;
+                Encoding.UTF8.GetBytes(transferId).CopyTo(ackData, 1);
+                BitConverter.GetBytes(chunkIndex).CopyTo(ackData, 37);
+
+                await _udpClient.SendAsync(ackData, ackData.Length, serverEndPoint);
+
+                // Fire progress event
+                var fileRequest = new FileRequest
+                {
+                    TransferId = transferId,
+                    FileBytes = chunkData,
+                    Metadata = transfer.Metadata
+                };
+
+                FileProgress?.Invoke(this, new FileProgressEventArgs
+                {
+                    TransferId = transferId,
+                    BytesTransferred = transfer.ReceivedBytes,
+                    TotalBytes = transfer.TotalBytes,
+                    FileRequest = fileRequest
+                });
+
+                // Check if transfer is complete
+                if (transfer.ReceivedChunks.Count == totalChunks && isLast)
+                {
+                    await CompleteUdpFileTransfer(transferId, transfer);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error handling UDP file chunk: {ex.Message}");
+            }
+        }
+
+        private async Task CompleteUdpFileTransfer(string transferId, UdpFileTransfer transfer)
+        {
+            try
+            {
+                // Reconstruct the complete file
+                var completeFile = new List<byte>();
+                for (int i = 0; i < transfer.TotalChunks; i++)
+                {
+                    if (transfer.ReceivedChunks.TryGetValue(i, out var chunk))
+                    {
+                        completeFile.AddRange(chunk);
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Missing chunk {i} for transfer {transferId}");
+                        return;
+                    }
+                }
+
+                var fileRequest = new FileRequest
+                {
+                    TransferId = transferId,
+                    FileBytes = completeFile.ToArray(),
+                    Metadata = transfer.Metadata
+                };
+
+                FileCompleted?.Invoke(this, new FileCompletedEventArgs
+                {
+                    FileRequest = fileRequest,
+                    Success = true
+                });
+
+                _udpTransfers.TryRemove(transferId, out _);
+                Console.WriteLine($"UDP file transfer completed: {transferId} ({completeFile.Count} bytes)");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error completing UDP transfer: {ex.Message}");
             }
         }
 
@@ -575,8 +1065,31 @@ namespace LazyServer
         public void Disconnect()
         {
             _isConnected = false;
-            _sslStream?.Close();
-            _tcpClient?.Close();
+
+            try
+            {
+                _udpClient?.Close();
+                _udpClient?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error closing UDP client: {ex.Message}");
+            }
+            finally
+            {
+                _udpClient = null;
+            }
+
+            try
+            {
+                _sslStream?.Close();
+                _tcpClient?.Close();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error closing TCP connection: {ex.Message}");
+            }
+
             Disconnected?.Invoke(this, EventArgs.Empty);
             Console.WriteLine($"Disconnected from LazyServer (Connection ID: {ConnectionId})");
         }
@@ -620,7 +1133,72 @@ namespace LazyServer
                     break;
 
                 case MessageType.FileOffer:
+                    await HandleFileOffer(payload);
                     break;
+            }
+        }
+
+        private async Task HandleFileOffer(byte[] payload)
+        {
+            var offerJson = Encoding.UTF8.GetString(payload);
+            var offerData = JObject.Parse(offerJson);
+            var transferId = offerData["TransferId"]?.ToString();
+            var metadata = offerData["Metadata"]?.ToString() ?? "";
+            var useUdp = offerData["UseUdp"]?.ToObject<bool>() ?? false;
+
+            if (useUdp)
+            {
+                // Initialize UDP transfer
+                var serverEndPoint = new IPEndPoint(IPAddress.Parse(_serverHostname == "localhost" ? "127.0.0.1" : _serverHostname), _serverUdpPort);
+
+                var initData = new byte[37 + ConnectionId.Length];
+                initData[0] = (byte)MessageType.UdpInit;
+                Encoding.UTF8.GetBytes(transferId).CopyTo(initData, 1);
+                Encoding.UTF8.GetBytes(ConnectionId).CopyTo(initData, 37);
+
+                await _udpClient.SendAsync(initData, initData.Length, serverEndPoint);
+
+                var transfer = new UdpFileTransfer
+                {
+                    TransferId = transferId,
+                    Metadata = metadata,
+                    TotalBytes = offerData["FileSize"]?.ToObject<long>() ?? 0
+                };
+                _udpTransfers.TryAdd(transferId, transfer);
+
+                Console.WriteLine($"Initialized UDP transfer: {transferId}");
+            }
+            else if (offerData["FileBytes"] != null)
+            {
+                // Handle inline file bytes
+                var fileBytes = Convert.FromBase64String(offerData["FileBytes"].ToString());
+                var fileRequest = new FileRequest
+                {
+                    TransferId = transferId,
+                    FileBytes = fileBytes,
+                    Metadata = metadata
+                };
+
+                FileOfferWithMetaReceived?.Invoke(this, new FileOfferWithMetaEventArgs
+                {
+                    FileRequest = fileRequest
+                });
+            }
+            else
+            {
+                // Handle regular file offer
+                var fileRequest = new FileRequest
+                {
+                    TransferId = transferId,
+                    Metadata = metadata
+                };
+
+                FileOfferReceived?.Invoke(this, new FileOfferEventArgs
+                {
+                    TransferId = transferId,
+                    Metadata = metadata,
+                    FileRequest = fileRequest
+                });
             }
         }
 
@@ -678,73 +1256,126 @@ namespace LazyServer
             if (!_isConnected) throw new InvalidOperationException("Not connected to server");
             if (!File.Exists(filePath)) throw new FileNotFoundException($"File not found: {filePath}");
 
+            var fileBytes = await FileHelper.ReadAllBytesAsync(filePath);
+            await SendFileViaUdp(fileBytes, metadata);
+        }
+
+        private bool IsUdpClientReady()
+        {
+            try
+            {
+                return _udpClient != null && _udpClient.Client != null && _udpClient.Client.IsBound;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public async Task SendFileViaUdp(byte[] fileBytes, string metadata = "")
+        {
+            if (!_isConnected) throw new InvalidOperationException("Not connected to server");
+
+            if (!IsUdpClientReady())
+            {
+                Console.WriteLine("UDP client not ready, reinitializing...");
+                try
+                {
+                    _udpClient?.Close();
+                    _udpClient = new UdpClient(0);
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException($"Failed to initialize UDP client: {ex.Message}");
+                }
+            }
+
             var transferId = Guid.NewGuid().ToString();
 
+            // 1) Send offer via TCP
             var offerData = new
             {
                 TransferId = transferId,
-                Metadata = metadata
+                Metadata = metadata,
+                FileSize = fileBytes.Length,
+                UseUdp = true
             };
 
             var offerJson = JsonConvert.SerializeObject(offerData);
             await SendMessageInternal(MessageType.FileOffer, Encoding.UTF8.GetBytes(offerJson));
 
-            await StreamFileInternal(filePath, transferId, metadata);
+            // 2) Initialize UDP connection
+            var serverEndPoint = new IPEndPoint(IPAddress.Parse(_serverHostname == "localhost" ? "127.0.0.1" : _serverHostname), _serverUdpPort);
+
+            var initData = new byte[37 + ConnectionId.Length];
+            initData[0] = (byte)MessageType.UdpInit;
+            Encoding.UTF8.GetBytes(transferId).CopyTo(initData, 1);
+            Encoding.UTF8.GetBytes(ConnectionId).CopyTo(initData, 37);
+
+            await _udpClient.SendAsync(initData, initData.Length, serverEndPoint);
+
+            // 3) Wait for server UDP initialization
+            await Task.Delay(200);
+
+            // 4) Send file data via UDP
+            await SendFileDataViaUdp(transferId, fileBytes, serverEndPoint, metadata);
         }
 
-        public async Task StreamFile(string filePath, string metadata = "")
+        private async Task SendFileDataViaUdp(string transferId, byte[] fileBytes, IPEndPoint serverEndPoint, string metadata)
         {
-            await StreamFileWithMeta(filePath, metadata);
-        }
+            const int CHUNK_SIZE = 1400;
+            var totalChunks = (int)Math.Ceiling((double)fileBytes.Length / CHUNK_SIZE);
 
-        public async Task StreamFileWithMeta(string filePath, string metadata)
-        {
-            var transferId = Guid.NewGuid().ToString();
-            await StreamFileInternal(filePath, transferId, metadata);
-        }
-
-        private async Task StreamFileInternal(string filePath, string transferId, string metadata)
-        {
-            const int bufferSize = 8192;
-            var buffer = new byte[bufferSize];
-            long totalSent = 0;
-            var fileInfo = new FileInfo(filePath);
-
-            using (var fileStream = File.OpenRead(filePath))
+            for (int i = 0; i < totalChunks; i++)
             {
-                while (totalSent < fileInfo.Length)
+                var chunkStart = i * CHUNK_SIZE;
+                var chunkSize = Math.Min(CHUNK_SIZE, fileBytes.Length - chunkStart);
+                var chunkData = new byte[chunkSize];
+                Array.Copy(fileBytes, chunkStart, chunkData, 0, chunkSize);
+
+                // Create UDP packet: [1 byte type][36 bytes transferId][4 bytes chunkIndex][4 bytes totalChunks][1 byte isLast][data]
+                var packet = new byte[46 + chunkSize];
+                packet[0] = (byte)MessageType.UdpFileChunk;
+                Encoding.UTF8.GetBytes(transferId).CopyTo(packet, 1);
+                BitConverter.GetBytes(i).CopyTo(packet, 37);
+                BitConverter.GetBytes(totalChunks).CopyTo(packet, 41);
+                packet[45] = (byte)(i == totalChunks - 1 ? 1 : 0);
+                chunkData.CopyTo(packet, 46);
+
+                await _udpClient.SendAsync(packet, packet.Length, serverEndPoint);
+
+                // Fire progress event
+                var fileRequest = new FileRequest
                 {
-                    var read = await fileStream.ReadAsync(buffer, 0, bufferSize);
-                    if (read == 0) break;
+                    TransferId = transferId,
+                    FileBytes = chunkData,
+                    Metadata = metadata
+                };
 
-                    var dataPacket = new byte[36 + read];
-                    Encoding.UTF8.GetBytes(transferId).CopyTo(dataPacket, 0);
-                    Array.Copy(buffer, 0, dataPacket, 36, read);
+                FileProgress?.Invoke(this, new FileProgressEventArgs
+                {
+                    TransferId = transferId,
+                    BytesTransferred = (i + 1) * CHUNK_SIZE,
+                    TotalBytes = fileBytes.Length,
+                    FileRequest = fileRequest
+                });
 
-                    await SendMessageInternal(MessageType.FileData, dataPacket);
-
-                    totalSent += read;
-
-                    var fileRequest = new FileRequest
-                    {
-                        TransferId = transferId,
-                        FileBytes = new ArraySegment<byte>(buffer, 0, read).ToArray(),
-                        Metadata = metadata
-                    };
-
-                    FileProgress?.Invoke(this, new FileProgressEventArgs
-                    {
-                        TransferId = transferId,
-                        BytesTransferred = totalSent,
-                        TotalBytes = fileInfo.Length,
-                        FileRequest = fileRequest
-                    });
-                }
+                // Small delay to prevent overwhelming
+                if (i % 10 == 0)
+                    await Task.Delay(1);
             }
+
+            // 5) Send completion signal
+            var completeData = new byte[37];
+            completeData[0] = (byte)MessageType.UdpFileComplete;
+            Encoding.UTF8.GetBytes(transferId).CopyTo(completeData, 1);
+
+            await _udpClient.SendAsync(completeData, completeData.Length, serverEndPoint);
 
             var completedRequest = new FileRequest
             {
                 TransferId = transferId,
+                FileBytes = fileBytes,
                 Metadata = metadata
             };
 
@@ -754,7 +1385,20 @@ namespace LazyServer
                 Success = true
             });
 
-            Console.WriteLine($"File transfer completed: {Path.GetFileName(filePath)}");
+            Console.WriteLine($"UDP file transfer completed: {transferId} ({totalChunks} chunks, {fileBytes.Length} bytes)");
+        }
+
+        public async Task StreamFile(string filePath, string metadata = "")
+        {
+            await StreamFileWithMeta(filePath, metadata);
+        }
+
+        public async Task StreamFileWithMeta(string filePath, string metadata)
+        {
+            if (!File.Exists(filePath)) throw new FileNotFoundException($"File not found: {filePath}");
+
+            var fileBytes = await FileHelper.ReadAllBytesAsync(filePath);
+            await SendFileViaUdp(fileBytes, metadata);
         }
 
         public async Task AcceptFile(string transferId, string savePath)
@@ -790,6 +1434,7 @@ namespace LazyServer
         public SslStream SslStream { get; }
         public bool IsConnected => TcpClient?.Connected == true;
         public ConcurrentDictionary<string, FileTransfer> ActiveTransfers { get; } = new ConcurrentDictionary<string, FileTransfer>();
+        public int UdpPort { get; set; }
 
         public DateTime ConnectedAt { get; }
         public string RemoteEndPoint { get; }
@@ -817,11 +1462,9 @@ namespace LazyServer
 
         public override string ToString()
         {
-            return $"ClientConnection[Id={Id}, Remote={RemoteEndPoint}, Connected={IsConnected}, Since={ConnectedAt:yyyy-MM-dd HH:mm:ss}]";
+            return $"ClientConnection[Id={Id}, Remote={RemoteEndPoint}, Connected={IsConnected}, Since={ConnectedAt:yyyy-MM-dd HH:mm:ss}, UDP={UdpPort}]";
         }
     }
-
-
 
     public class FileTransfer
     {
@@ -830,6 +1473,19 @@ namespace LazyServer
         public long BytesTransferred { get; set; }
         public long TotalSize { get; set; }
         public FileStream FileStream { get; set; }
+    }
+
+    public static class FileHelper
+    {
+        public static async Task<byte[]> ReadAllBytesAsync(string filePath)
+        {
+            using (var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true))
+            {
+                var buffer = new byte[fileStream.Length];
+                await fileStream.ReadAsync(buffer, 0, buffer.Length);
+                return buffer;
+            }
+        }
     }
 
     public static class LazyServerExample
@@ -841,6 +1497,8 @@ namespace LazyServer
             server.MessageReceived += (s, e) => Console.WriteLine($"Message from {e.ClientId}: {e.Message}");
             server.FileOfferReceived += (s, e) => Console.WriteLine($"File offer from {e.ClientId}: {e.Metadata}");
             server.FileOfferWithMetaReceived += (s, e) => Console.WriteLine($"File with bytes from {e.ClientId}: {e.FileRequest.Metadata} ({e.FileRequest.FileBytes.Length} bytes)");
+            server.FileProgress += (s, e) => Console.WriteLine($"File progress {e.ClientId}: {e.BytesTransferred}/{e.TotalBytes} bytes ({(e.BytesTransferred * 100.0 / Math.Max(e.TotalBytes, 1)):F1}%)");
+            server.FileCompleted += (s, e) => Console.WriteLine($"File completed from {e.ClientId}: {e.FileRequest.Metadata} (Success: {e.Success})");
 
             server.ClientConnected += (s, clientId) =>
             {
@@ -854,9 +1512,13 @@ namespace LazyServer
 
             server.ClientDisconnected += (s, clientId) => Console.WriteLine($"Client disconnected: {clientId}");
 
-            await server.StartAsync(8888);
+            await server.StartAsync(8888, 8889); // TCP port 8888, UDP port 8889
 
-            Console.WriteLine("Server running. Type 'list' to see connections, 'send <id> <message>' to send to specific client, or 'quit' to stop...");
+            Console.WriteLine("Server running. Commands:");
+            Console.WriteLine("  list - show connections");
+            Console.WriteLine("  send <id> <message> - send message to client");
+            Console.WriteLine("  file <id> <path> - send file to client via UDP");
+            Console.WriteLine("  quit - stop server");
 
             string input;
             while ((input = Console.ReadLine()) != "quit")
@@ -889,6 +1551,32 @@ namespace LazyServer
                         }
                     }
                 }
+                else if (input.StartsWith("file "))
+                {
+                    var parts = input.Split(new char[] { ' ' }, 3);
+                    if (parts.Length >= 3)
+                    {
+                        var targetId = parts[1];
+                        var filePath = parts[2];
+
+                        if (server.TryGetConnectionById(targetId, out var connection))
+                        {
+                            try
+                            {
+                                await server.SendFileToClient(targetId, filePath, $"{{\"filename\":\"{Path.GetFileName(filePath)}\",\"sentAt\":\"{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}\"}}");
+                                Console.WriteLine($"File {filePath} sent to {targetId} via UDP");
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"Error sending file: {ex.Message}");
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Connection {targetId} not found");
+                        }
+                    }
+                }
             }
 
             server.Stop();
@@ -900,21 +1588,24 @@ namespace LazyServer
 
             client.MessageReceived += (s, e) => Console.WriteLine($"Server message: {e.Message}");
             client.Connected += (s, e) => Console.WriteLine($"Connected to server with Connection ID: {client.ConnectionId}");
-            client.FileCompleted += (s, e) => Console.WriteLine($"File transfer completed: {e.FileRequest.Metadata}");
+            client.FileProgress += (s, e) => Console.WriteLine($"File progress: {e.BytesTransferred}/{e.TotalBytes} bytes ({(e.BytesTransferred * 100.0 / Math.Max(e.TotalBytes, 1)):F1}%)");
+            client.FileCompleted += (s, e) => Console.WriteLine($"File transfer completed: {e.FileRequest.Metadata} (Success: {e.Success}, Size: {e.FileRequest.FileBytes?.Length ?? 0} bytes)");
 
-            await client.ConnectAsync("localhost", 8888);
+            await client.ConnectAsync("localhost", 8888, 8889);
 
-            await client.SendMessage($"Hello from client with ID: {client.ConnectionId}!");
+            await client.SendMessage($"Hello from UDP-enabled client with ID: {client.ConnectionId}!");
 
             if (File.Exists("test.txt"))
             {
-                await client.SendFile("test.txt", "{\"type\":\"text\",\"priority\":\"high\"}");
+                Console.WriteLine("Sending test.txt via UDP...");
+                await client.SendFile("test.txt", "{\"type\":\"text\",\"priority\":\"high\",\"transport\":\"udp\"}");
             }
 
-            var fileBytes = Encoding.UTF8.GetBytes("This is file content from bytes!");
-            await client.SendFileBytes(fileBytes, "{\"author\":\"LazyServer\",\"version\":\"1.0\",\"tags\":[\"test\",\"demo\"]}");
+            // Test sending file bytes via UDP
+            var fileBytes = Encoding.UTF8.GetBytes("This is file content sent via UDP!");
+            await client.SendFileViaUdp(fileBytes, "{\"author\":\"LazyServer\",\"version\":\"2.0\",\"transport\":\"udp\",\"tags\":[\"test\",\"demo\",\"udp\"]}");
 
-            Console.WriteLine($"Client running with Connection ID: {client.ConnectionId}. Press any key to disconnect...");
+            Console.WriteLine($"UDP-enabled client running with Connection ID: {client.ConnectionId}. Press any key to disconnect...");
             Console.ReadKey();
 
             client.Disconnect();

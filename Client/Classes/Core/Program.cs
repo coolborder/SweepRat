@@ -381,7 +381,7 @@ namespace Client
             if (micTokenSource != null)
             {
                 micTokenSource.Cancel();
-                try { await micLoopTask; } catch (OperationCanceledException) { } catch { }
+                try { await micLoopTask; } catch { };
                 micTokenSource.Dispose();
             }
 

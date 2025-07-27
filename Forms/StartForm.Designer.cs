@@ -116,6 +116,8 @@
             this.port.SelectedText = "";
             this.port.Size = new System.Drawing.Size(221, 20);
             this.port.TabIndex = 1;
+            this.port.TextChanged += new System.EventHandler(this.port_TextChanged);
+            this.port.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.port_KeyPress);
             // 
             // StartForm
             // 

