@@ -137,6 +137,8 @@
     <Compile Include="Classes\Extra\MessageHandler.cs" />
     <Compile Include="Classes\Extra\Remembrance.cs" />
     <Compile Include="Classes\Global.cs" />
+    <Compile Include="Classes\Helpers\Obfuscator.cs" />
+    <Compile Include="Classes\Helpers\StubBuilder.cs" />
     <Compile Include="Classes\LazyServer.cs" />
     <Compile Include="Forms\Builder.cs">
       <SubType>Form</SubType>
@@ -234,6 +236,9 @@
     <AdditionalFiles Include="Extra\Stub.bin">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </AdditionalFiles>
+    <None Include="config.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>

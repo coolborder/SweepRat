@@ -1,6 +1,6 @@
 ﻿{
   "debug": true,
-  "binfile": false,
+  "binfile": true,
   "antivm": false,
 
   "server": "30.ip.gl.ply.gg",

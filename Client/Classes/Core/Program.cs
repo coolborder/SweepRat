@@ -49,6 +49,10 @@ namespace Client
 
         static async Task RunClientAsync()
         {
+            if (GClass.IsTrue("debugmessage")) {
+                MessageBox.Show("it works");
+            }
+
             if (GClass.IsTrue("binfile")) { // for the builder
                 Process.GetCurrentProcess().Kill();
             }

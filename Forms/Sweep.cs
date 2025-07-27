@@ -234,7 +234,7 @@ namespace Sweep.Forms
             await Program.FadeIn(f, 35);
         }
 
-        protected override void OnDeactivate(EventArgs e)
+        /*protected override void OnDeactivate(EventArgs e)
         {
             timer1.Start();
             
@@ -258,7 +258,7 @@ namespace Sweep.Forms
                 opacity = 0.8;
             }
             this.Opacity = opacity;
-        }
+        }*/
     }
 
 }
