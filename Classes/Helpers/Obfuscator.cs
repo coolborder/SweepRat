@@ -48,8 +48,9 @@ class Obfuscator
 
         if (_level == ObfuscationLevel.High)
         {
-            InjectStringDecryptor(module);
+            // Create XOR key first, then decrypt method
             InjectXorKey(module);
+            InjectStringDecryptor(module);
         }
 
         foreach (var type in module.Types.ToList())
@@ -128,7 +129,7 @@ class Obfuscator
 
         xorKeyField = new FieldDefinition(
             "xorKey",
-            FieldAttributes.Private | FieldAttributes.Static | FieldAttributes.InitOnly | FieldAttributes.HasDefault,
+            FieldAttributes.Private | FieldAttributes.Static | FieldAttributes.InitOnly,
             module.TypeSystem.Byte);
 
         decryptType.Fields.Add(xorKeyField);
@@ -147,22 +148,20 @@ class Obfuscator
         }
 
         var ilProcessor = cctor.Body.GetILProcessor();
-        var first = cctor.Body.Instructions.First();
+        var instructions = cctor.Body.Instructions;
+        var retInstruction = instructions.Last(i => i.OpCode == OpCodes.Ret);
 
-        ilProcessor.InsertBefore(first, ilProcessor.Create(OpCodes.Ldc_I4, (int)keyBytes[0]));
-        ilProcessor.InsertBefore(first, ilProcessor.Create(OpCodes.Stsfld, xorKeyField));
+        ilProcessor.InsertBefore(retInstruction, ilProcessor.Create(OpCodes.Ldc_I4, (int)keyBytes[0]));
+        ilProcessor.InsertBefore(retInstruction, ilProcessor.Create(OpCodes.Stsfld, xorKeyField));
     }
 
     private void InjectStringDecryptor(ModuleDefinition module)
     {
-        // Find or create StringDecryptor type
+        // Find the StringDecryptor type (should already exist from InjectXorKey)
         var decryptType = module.Types.FirstOrDefault(t => t.Name == "StringDecryptor");
         if (decryptType == null)
         {
-            decryptType = new TypeDefinition("", "StringDecryptor",
-                TypeAttributes.Class | TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed,
-                module.ImportReference(typeof(object)));
-            module.Types.Add(decryptType);
+            throw new InvalidOperationException("StringDecryptor type not found. InjectXorKey should be called first.");
         }
 
         decryptMethod = new MethodDefinition("Decrypt",
@@ -189,12 +188,22 @@ class Obfuscator
         decryptMethod.Body.Variables.Add(new VariableDefinition(module.TypeSystem.Char));
         decryptMethod.Body.InitLocals = true;
 
-        // Get xorKey field reference from decryptType
-        var xorKeyFieldRef = decryptType.Fields.First(f => f.Name == "xorKey");
+        // Use the xorKeyField that was created in InjectXorKey
+        if (xorKeyField == null)
+        {
+            throw new InvalidOperationException("XOR key field not found. InjectXorKey should be called first.");
+        }
 
         var ret = il.Create(OpCodes.Ret);
 
+        // Add null check at the beginning
+        var notNull = il.Create(OpCodes.Ldarg_0);
         il.Append(il.Create(OpCodes.Ldarg_0));
+        il.Append(il.Create(OpCodes.Brtrue_S, notNull));
+        il.Append(il.Create(OpCodes.Ldarg_0));
+        il.Append(il.Create(OpCodes.Ret));
+
+        il.Append(notNull);
         il.Append(il.Create(OpCodes.Call, module.ImportReference(typeof(string).GetMethod("ToCharArray", Type.EmptyTypes))));
         il.Append(il.Create(OpCodes.Stloc_0));
 
@@ -208,7 +217,8 @@ class Obfuscator
         il.Append(il.Create(OpCodes.Ldlen));
         il.Append(il.Create(OpCodes.Conv_I4));
 
-        il.Append(il.Create(OpCodes.Bge_S, ret));
+        var endLoop = il.Create(OpCodes.Ldloc_0);
+        il.Append(il.Create(OpCodes.Bge_S, endLoop));
 
         il.Append(il.Create(OpCodes.Ldloc_0));
         il.Append(il.Create(OpCodes.Ldloc_1));
@@ -217,7 +227,7 @@ class Obfuscator
         il.Append(il.Create(OpCodes.Dup));
         il.Append(il.Create(OpCodes.Ldobj, module.TypeSystem.Char));
 
-        il.Append(il.Create(OpCodes.Ldsfld, xorKeyFieldRef));
+        il.Append(il.Create(OpCodes.Ldsfld, xorKeyField));
 
         il.Append(il.Create(OpCodes.Xor));
         il.Append(il.Create(OpCodes.Conv_U2));
@@ -231,6 +241,8 @@ class Obfuscator
 
         il.Append(il.Create(OpCodes.Br_S, loopStart));
 
+        il.Append(endLoop);
+        il.Append(il.Create(OpCodes.Newobj, stringCtor));
         il.Append(ret);
 
         decryptType.Methods.Add(decryptMethod);
@@ -238,21 +250,28 @@ class Obfuscator
 
     private void ObfuscateStrings(MethodDefinition method)
     {
-        if (!method.HasBody) return;
+        if (!method.HasBody || decryptMethod == null) return;
 
         var il = method.Body.GetILProcessor();
-        var instructions = method.Body.Instructions;
+        var instructions = method.Body.Instructions.ToList(); // Create a copy to avoid modification during iteration
 
         for (int i = 0; i < instructions.Count; i++)
         {
             if (instructions[i].OpCode == OpCodes.Ldstr)
             {
                 var original = instructions[i].Operand as string;
-                var encrypted = EncryptString(original);
+                if (!string.IsNullOrEmpty(original))
+                {
+                    var encrypted = EncryptString(original);
 
-                instructions[i].Operand = encrypted;
-                instructions.Insert(i + 1, il.Create(OpCodes.Call, decryptMethod));
-                i++; // Skip inserted decrypt call
+                    // Replace the original instruction
+                    var newLoadStr = il.Create(OpCodes.Ldstr, encrypted);
+                    il.Replace(instructions[i], newLoadStr);
+
+                    // Insert decrypt call after
+                    var decryptCall = il.Create(OpCodes.Call, decryptMethod);
+                    il.InsertAfter(newLoadStr, decryptCall);
+                }
             }
         }
     }
@@ -264,12 +283,12 @@ class Obfuscator
 
         byte key = GetXorKey();
 
-        var inputBytes = Encoding.UTF8.GetBytes(input);
-        for (int i = 0; i < inputBytes.Length; i++)
+        var chars = input.ToCharArray();
+        for (int i = 0; i < chars.Length; i++)
         {
-            inputBytes[i] ^= key;
+            chars[i] = (char)(chars[i] ^ key);
         }
-        return Convert.ToBase64String(inputBytes);
+        return new string(chars);
     }
 
     private byte _xorKeyCache = 0;
