@@ -54,6 +54,7 @@
             this.pictureBox2 = new System.Windows.Forms.PictureBox();
             this.guna2GradientButton1 = new Guna.UI2.WinForms.Guna2GradientButton();
             this.builddialog = new System.Windows.Forms.SaveFileDialog();
+            this.status = new System.Windows.Forms.Label();
             this.guna2TabControl1.SuspendLayout();
             this.conn.SuspendLayout();
             this.build.SuspendLayout();
@@ -276,6 +277,7 @@
             // 
             // build
             // 
+            this.build.Controls.Add(this.status);
             this.build.Controls.Add(this.label3);
             this.build.Controls.Add(this.Obflevel);
             this.build.Controls.Add(this.closable);
@@ -292,7 +294,7 @@
             // label3
             // 
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(8, 225);
+            this.label3.Location = new System.Drawing.Point(8, 210);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(197, 13);
             this.label3.TabIndex = 10;
@@ -306,7 +308,7 @@
             "Low",
             "Medium",
             "High"});
-            this.Obflevel.Location = new System.Drawing.Point(8, 244);
+            this.Obflevel.Location = new System.Drawing.Point(8, 229);
             this.Obflevel.Name = "Obflevel";
             this.Obflevel.Size = new System.Drawing.Size(123, 21);
             this.Obflevel.TabIndex = 9;
@@ -423,7 +425,7 @@
             this.guna2GradientButton1.ForeColor = System.Drawing.Color.White;
             this.guna2GradientButton1.Image = global::Sweep.Properties.Resources.play;
             this.guna2GradientButton1.ImageAlign = System.Windows.Forms.HorizontalAlignment.Left;
-            this.guna2GradientButton1.Location = new System.Drawing.Point(8, 271);
+            this.guna2GradientButton1.Location = new System.Drawing.Point(8, 256);
             this.guna2GradientButton1.Name = "guna2GradientButton1";
             this.guna2GradientButton1.Size = new System.Drawing.Size(521, 42);
             this.guna2GradientButton1.TabIndex = 0;
@@ -435,6 +437,18 @@
             this.builddialog.DefaultExt = "exe";
             this.builddialog.FileName = "SweepClient";
             this.builddialog.Filter = "EXE Files|*.exe";
+            // 
+            // status
+            // 
+            this.status.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left)));
+            this.status.AutoSize = true;
+            this.status.Location = new System.Drawing.Point(6, 303);
+            this.status.Name = "status";
+            this.status.Size = new System.Drawing.Size(50, 13);
+            this.status.TabIndex = 11;
+            this.status.Text = "[ Ready ]";
+            this.status.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // Builder
             // 
@@ -491,5 +505,6 @@
         private Guna.UI2.WinForms.Guna2ToggleSwitch guna2ToggleSwitch3;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.ComboBox Obflevel;
+        private System.Windows.Forms.Label status;
     }
 }
