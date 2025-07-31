@@ -161,6 +161,7 @@
             this.Controls.Add(this.guna2GradientButton1);
             this.Controls.Add(this.screenimg);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+            this.KeyPreview = true;
             this.MinimumSize = new System.Drawing.Size(684, 456);
             this.Name = "ScreenViewer";
             this.Text = "Screen Viewer";

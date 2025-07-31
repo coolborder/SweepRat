@@ -47,20 +47,26 @@
             this.closable = new Guna.UI2.WinForms.Guna2ShadowPanel();
             this.guna2Button2 = new Guna.UI2.WinForms.Guna2Button();
             this.label1 = new System.Windows.Forms.Label();
-            this.pictureBox1 = new System.Windows.Forms.PictureBox();
             this.closable2 = new Guna.UI2.WinForms.Guna2ShadowPanel();
             this.guna2Button1 = new Guna.UI2.WinForms.Guna2Button();
             this.label2 = new System.Windows.Forms.Label();
-            this.pictureBox2 = new System.Windows.Forms.PictureBox();
-            this.guna2GradientButton1 = new Guna.UI2.WinForms.Guna2GradientButton();
             this.builddialog = new System.Windows.Forms.SaveFileDialog();
             this.status = new System.Windows.Forms.Label();
+            this.guna2GradientButton2 = new Guna.UI2.WinForms.Guna2GradientButton();
+            this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.pictureBox3 = new System.Windows.Forms.PictureBox();
+            this.pictureBox1 = new System.Windows.Forms.PictureBox();
+            this.pictureBox2 = new System.Windows.Forms.PictureBox();
+            this.guna2GradientButton1 = new Guna.UI2.WinForms.Guna2GradientButton();
             this.guna2TabControl1.SuspendLayout();
             this.conn.SuspendLayout();
+            this.opt.SuspendLayout();
             this.build.SuspendLayout();
             this.closable.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.closable2.SuspendLayout();
+            this.groupBox1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox3)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).BeginInit();
             this.SuspendLayout();
             // 
@@ -267,6 +273,8 @@
             // 
             // opt
             // 
+            this.opt.Controls.Add(this.guna2GradientButton2);
+            this.opt.Controls.Add(this.groupBox1);
             this.opt.Location = new System.Drawing.Point(4, 44);
             this.opt.Name = "opt";
             this.opt.Padding = new System.Windows.Forms.Padding(3);
@@ -353,16 +361,6 @@
             this.label1.TabIndex = 4;
             this.label1.Text = "Size of stub may vary depending on selections";
             // 
-            // pictureBox1
-            // 
-            this.pictureBox1.Image = global::Sweep.Properties.Resources.exclamation_mark;
-            this.pictureBox1.Location = new System.Drawing.Point(10, 10);
-            this.pictureBox1.Name = "pictureBox1";
-            this.pictureBox1.Size = new System.Drawing.Size(37, 50);
-            this.pictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
-            this.pictureBox1.TabIndex = 3;
-            this.pictureBox1.TabStop = false;
-            // 
             // closable2
             // 
             this.closable2.BackColor = System.Drawing.Color.Transparent;
@@ -403,6 +401,70 @@
             this.label2.Text = "If you choose to build or use the stub, you are fully responsible for how it is u" +
     "sed.\r\nAny misuse is your own legal and ethical responsibility.";
             // 
+            // builddialog
+            // 
+            this.builddialog.DefaultExt = "exe";
+            this.builddialog.FileName = "SweepClient";
+            this.builddialog.Filter = "EXE Files|*.exe";
+            // 
+            // status
+            // 
+            this.status.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left)));
+            this.status.AutoSize = true;
+            this.status.Location = new System.Drawing.Point(6, 303);
+            this.status.Name = "status";
+            this.status.Size = new System.Drawing.Size(50, 13);
+            this.status.TabIndex = 11;
+            this.status.Text = "[ Ready ]";
+            this.status.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            // 
+            // guna2GradientButton2
+            // 
+            this.guna2GradientButton2.BorderRadius = 3;
+            this.guna2GradientButton2.DisabledState.BorderColor = System.Drawing.Color.DarkGray;
+            this.guna2GradientButton2.DisabledState.CustomBorderColor = System.Drawing.Color.DarkGray;
+            this.guna2GradientButton2.DisabledState.FillColor = System.Drawing.Color.FromArgb(((int)(((byte)(169)))), ((int)(((byte)(169)))), ((int)(((byte)(169)))));
+            this.guna2GradientButton2.DisabledState.FillColor2 = System.Drawing.Color.FromArgb(((int)(((byte)(169)))), ((int)(((byte)(169)))), ((int)(((byte)(169)))));
+            this.guna2GradientButton2.DisabledState.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(141)))), ((int)(((byte)(141)))), ((int)(((byte)(141)))));
+            this.guna2GradientButton2.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.guna2GradientButton2.ForeColor = System.Drawing.Color.White;
+            this.guna2GradientButton2.Location = new System.Drawing.Point(448, 295);
+            this.guna2GradientButton2.Name = "guna2GradientButton2";
+            this.guna2GradientButton2.Size = new System.Drawing.Size(81, 23);
+            this.guna2GradientButton2.TabIndex = 0;
+            this.guna2GradientButton2.Text = "Change";
+            // 
+            // groupBox1
+            // 
+            this.groupBox1.Controls.Add(this.pictureBox3);
+            this.groupBox1.Location = new System.Drawing.Point(448, 208);
+            this.groupBox1.Name = "groupBox1";
+            this.groupBox1.Size = new System.Drawing.Size(81, 84);
+            this.groupBox1.TabIndex = 1;
+            this.groupBox1.TabStop = false;
+            this.groupBox1.Text = "Icon";
+            // 
+            // pictureBox3
+            // 
+            this.pictureBox3.Image = global::Sweep.Properties.Resources.photo_2025_07_26_00_40_41;
+            this.pictureBox3.Location = new System.Drawing.Point(6, 19);
+            this.pictureBox3.Name = "pictureBox3";
+            this.pictureBox3.Size = new System.Drawing.Size(69, 59);
+            this.pictureBox3.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
+            this.pictureBox3.TabIndex = 0;
+            this.pictureBox3.TabStop = false;
+            // 
+            // pictureBox1
+            // 
+            this.pictureBox1.Image = global::Sweep.Properties.Resources.exclamation_mark;
+            this.pictureBox1.Location = new System.Drawing.Point(10, 10);
+            this.pictureBox1.Name = "pictureBox1";
+            this.pictureBox1.Size = new System.Drawing.Size(37, 50);
+            this.pictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
+            this.pictureBox1.TabIndex = 3;
+            this.pictureBox1.TabStop = false;
+            // 
             // pictureBox2
             // 
             this.pictureBox2.Image = global::Sweep.Properties.Resources.exclamation_mark;
@@ -432,24 +494,6 @@
             this.guna2GradientButton1.Text = "BUILD!";
             this.guna2GradientButton1.Click += new System.EventHandler(this.guna2GradientButton1_Click);
             // 
-            // builddialog
-            // 
-            this.builddialog.DefaultExt = "exe";
-            this.builddialog.FileName = "SweepClient";
-            this.builddialog.Filter = "EXE Files|*.exe";
-            // 
-            // status
-            // 
-            this.status.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left)));
-            this.status.AutoSize = true;
-            this.status.Location = new System.Drawing.Point(6, 303);
-            this.status.Name = "status";
-            this.status.Size = new System.Drawing.Size(50, 13);
-            this.status.TabIndex = 11;
-            this.status.Text = "[ Ready ]";
-            this.status.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            // 
             // Builder
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -466,13 +510,16 @@
             this.guna2TabControl1.ResumeLayout(false);
             this.conn.ResumeLayout(false);
             this.conn.PerformLayout();
+            this.opt.ResumeLayout(false);
             this.build.ResumeLayout(false);
             this.build.PerformLayout();
             this.closable.ResumeLayout(false);
             this.closable.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
             this.closable2.ResumeLayout(false);
             this.closable2.PerformLayout();
+            this.groupBox1.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox3)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).EndInit();
             this.ResumeLayout(false);
 
@@ -506,5 +553,8 @@
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.ComboBox Obflevel;
         private System.Windows.Forms.Label status;
+        private Guna.UI2.WinForms.Guna2GradientButton guna2GradientButton2;
+        private System.Windows.Forms.GroupBox groupBox1;
+        private System.Windows.Forms.PictureBox pictureBox3;
     }
 }

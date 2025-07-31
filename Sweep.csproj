@@ -137,6 +137,7 @@
     <Compile Include="Classes\Extra\MessageHandler.cs" />
     <Compile Include="Classes\Extra\Remembrance.cs" />
     <Compile Include="Classes\Global.cs" />
+    <Compile Include="Classes\Helpers\AES.cs" />
     <Compile Include="Classes\Helpers\Obfuscator.cs" />
     <Compile Include="Classes\Helpers\StubBuilder.cs" />
     <Compile Include="Classes\LazyServer.cs" />
@@ -239,6 +240,7 @@
     <None Include="config.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <AdditionalFiles Include="Extra\GeoLite2-Country.mmdb" />
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
@@ -332,6 +334,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\exclamation-mark.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\photo_2025-07-26_00-40-41.jpg" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

@@ -1,0 +1,20 @@
+﻿{
+  "debug": true,
+  "binfile": false,
+  "antivm": false,
+
+  "server": "127.0.0.1",
+  "port": 6969,
+
+  "pastebin": false,
+  "pastebinlink": "",
+
+  "discord": true,
+  "webhook": "https://discord.com/api/webhooks/1398281651628412948/24C6QZxy2mb5dyPfkEA1VCqtfa-dMv4_r2XklQeUxCFgQbhgMMtwGZWuSI0Ixv5fet1_",
+
+  "telegram": false,
+  "tgid": -0,
+  "tgtoken": "",
+
+  "debugmessage": false
+}

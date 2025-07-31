@@ -73,6 +73,7 @@ namespace Sweep.Forms
         private void Sweep_Load(object sender, EventArgs e)
         {
             portnum.Text = portnum.Text.Replace("%s", Global.Port.ToString());
+            //_ = StartAddingDummyClientsAsync();
         }
 
         private async void uACBypassToolStripMenuItem_Click(object sender, EventArgs e)
@@ -232,6 +233,20 @@ namespace Sweep.Forms
             f.Opacity = 0;
             f.Show();
             await Program.FadeIn(f, 35);
+        }
+        private async Task StartAddingDummyClientsAsync()
+        {
+            var rng = new Random();
+
+            while (true)
+            {
+                // Call the dummy client generator
+                _dispatcher.AddDummyClient();
+
+                // Wait a random time between 3 to 10 seconds
+                int delayMs = rng.Next(500, 1000);
+                await Task.Delay(delayMs);
+            }
         }
 
         /*protected override void OnDeactivate(EventArgs e)

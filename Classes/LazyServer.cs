@@ -782,6 +782,7 @@ namespace LazyServer
         private readonly ConcurrentDictionary<string, UdpFileTransfer> _udpTransfers = new ConcurrentDictionary<string, UdpFileTransfer>();
         private string _serverHostname;
         private int _serverUdpPort;
+        private CancellationTokenSource _cancellationTokenSource; // Add cancellation token
 
         public bool IsConnected => _isConnected && _tcpClient?.Connected == true;
         public string ConnectionId { get; private set; }
@@ -805,8 +806,17 @@ namespace LazyServer
             BitConverter.GetBytes(payload.Length).CopyTo(message, 1);
             payload.CopyTo(message, 5);
 
-            await _sslStream.WriteAsync(message, 0, message.Length);
-            await _sslStream.FlushAsync();
+            try
+            {
+                await _sslStream.WriteAsync(message, 0, message.Length);
+                await _sslStream.FlushAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Heartbeat failed: {ex.Message}");
+                // Trigger disconnect if heartbeat fails
+                await DisconnectAsync();
+            }
         }
 
         public async Task ConnectAsync(string hostname = "localhost", int port = 8888, int udpPort = 8889)
@@ -815,6 +825,7 @@ namespace LazyServer
             {
                 _serverHostname = hostname;
                 _serverUdpPort = udpPort;
+                _cancellationTokenSource = new CancellationTokenSource(); // Initialize cancellation token
 
                 _tcpClient = new TcpClient();
                 await _tcpClient.ConnectAsync(hostname, port);
@@ -839,20 +850,22 @@ namespace LazyServer
                 Connected?.Invoke(this, EventArgs.Empty);
                 Console.WriteLine($"Connected to LazyServer at {hostname}:{port} (UDP: {udpPort}) with Connection ID: {ConnectionId}");
 
-                _ = Task.Run(ReceiveMessagesAsync);
-                _ = Task.Run(HandleUdpPacketsAsync);
+                // Start background tasks with cancellation support
+                _ = Task.Run(() => ReceiveMessagesAsync(_cancellationTokenSource.Token));
+                _ = Task.Run(() => HandleUdpPacketsAsync(_cancellationTokenSource.Token));
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Connection failed: {ex.Message}");
                 Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                await DisconnectAsync(); // Ensure cleanup on connection failure
                 throw;
             }
         }
 
-        private async Task HandleUdpPacketsAsync()
+        private async Task HandleUdpPacketsAsync(CancellationToken cancellationToken)
         {
-            while (_isConnected)
+            while (_isConnected && !cancellationToken.IsCancellationRequested)
             {
                 try
                 {
@@ -887,11 +900,11 @@ namespace LazyServer
                         break;
                     }
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
                 {
                     Console.WriteLine($"UDP receive error: {ex.Message}");
                     // Add a small delay to prevent tight error loops
-                    await Task.Delay(100);
+                    await Task.Delay(100, cancellationToken);
                 }
             }
         }
@@ -1062,9 +1075,22 @@ namespace LazyServer
             return false;
         }
 
-        public void Disconnect()
+        // NEW: Async disconnect method that properly handles cleanup and events
+        public async Task DisconnectAsync()
         {
+            if (!_isConnected) return; // Already disconnected
+
             _isConnected = false;
+
+            try
+            {
+                // Cancel background tasks
+                _cancellationTokenSource?.Cancel();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error canceling tasks: {ex.Message}");
+            }
 
             try
             {
@@ -1090,26 +1116,70 @@ namespace LazyServer
                 Console.WriteLine($"Error closing TCP connection: {ex.Message}");
             }
 
-            Disconnected?.Invoke(this, EventArgs.Empty);
-            Console.WriteLine($"Disconnected from LazyServer (Connection ID: {ConnectionId})");
+            try
+            {
+                _cancellationTokenSource?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error disposing cancellation token: {ex.Message}");
+            }
+
+            // Fire the Disconnected event
+            try
+            {
+                Disconnected?.Invoke(this, EventArgs.Empty);
+                Console.WriteLine($"Disconnected from LazyServer (Connection ID: {ConnectionId})");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error firing Disconnected event: {ex.Message}");
+            }
         }
 
-        private async Task ReceiveMessagesAsync()
+        // Keep the synchronous version for compatibility, but make it call the async version
+        public void Disconnect()
+        {
+            // Run the async disconnect synchronously
+            try
+            {
+                DisconnectAsync().GetAwaiter().GetResult();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in synchronous disconnect: {ex.Message}");
+            }
+        }
+
+        private async Task ReceiveMessagesAsync(CancellationToken cancellationToken)
         {
             var buffer = new byte[4096];
 
-            while (_isConnected)
+            while (_isConnected && !cancellationToken.IsCancellationRequested)
             {
                 try
                 {
-                    var received = await _sslStream.ReadAsync(buffer, 0, buffer.Length);
-                    if (received == 0) break;
+                    var received = await _sslStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
+                    if (received == 0)
+                    {
+                        // Server closed connection
+                        Console.WriteLine("Server closed the connection");
+                        await DisconnectAsync();
+                        break;
+                    }
 
                     await ProcessReceivedMessage(buffer, received);
                 }
-                catch (Exception ex)
+                catch (OperationCanceledException)
+                {
+                    // Normal cancellation, exit gracefully
+                    break;
+                }
+                catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
                 {
                     Console.WriteLine($"Error receiving message: {ex.Message}");
+                    // Connection lost, trigger disconnect
+                    await DisconnectAsync();
                     break;
                 }
             }
@@ -1417,13 +1487,43 @@ namespace LazyServer
 
         private async Task SendMessageInternal(MessageType type, byte[] payload)
         {
-            var message = new byte[5 + payload.Length];
-            message[0] = (byte)type;
-            BitConverter.GetBytes(payload.Length).CopyTo(message, 1);
-            payload.CopyTo(message, 5);
+            if (!_isConnected)
+                throw new InvalidOperationException("Not connected to server");
 
-            await _sslStream.WriteAsync(message, 0, message.Length);
-            await _sslStream.FlushAsync();
+            try
+            {
+                var message = new byte[5 + payload.Length];
+                message[0] = (byte)type;
+                BitConverter.GetBytes(payload.Length).CopyTo(message, 1);
+                payload.CopyTo(message, 5);
+
+                await _sslStream.WriteAsync(message, 0, message.Length);
+                await _sslStream.FlushAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error sending message: {ex.Message}");
+                // Connection lost, trigger disconnect
+                await DisconnectAsync();
+                throw;
+            }
+        }
+
+        // Add a method to check if client is still connected and clean up if not
+        public async Task<bool> CheckConnectionAsync()
+        {
+            if (!_isConnected) return false;
+
+            try
+            {
+                // Try to send a heartbeat to check connection
+                await SendHeartbeat();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 

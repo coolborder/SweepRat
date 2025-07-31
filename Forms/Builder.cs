@@ -188,7 +188,7 @@ namespace Sweep.Forms
                         "./Extra/Stub.bin",
                         tempPath,
                         "config.json",
-                        config.ToString()
+                        AesUtility.Encrypt(config.ToString(), "pe3ASaxZMwfg")
                     );
 
                     if (!success)

