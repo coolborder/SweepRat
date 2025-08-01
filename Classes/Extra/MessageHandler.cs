@@ -42,17 +42,23 @@ namespace Sweep.Services
             ListViewConfigurator.Configure(_listView, port);
 
             _server.MessageReceived += OnTextMessageReceived;
-            _server.FileOfferWithMetaReceived += OnFileOfferWithMetaReceived;
+            _server.FileCompleted += OnFileCompleted;
             _server.ClientDisconnected += OnClientDisconnected;
         }
-
         private void OnTextMessageReceived(object sender, MessageEventArgs e)
         {
             Console.WriteLine($"[MSG] From {e.ClientId}: {e.Message}");
         }
 
-        private async void OnFileOfferWithMetaReceived(object sender, FileOfferWithMetaEventArgs e)
+        private async void OnFileCompleted(object sender, FileCompletedEventArgs e)
         {
+            if (string.IsNullOrWhiteSpace(e.FileRequest.Metadata)) return;
+            if (e.FileRequest?.FileBytes == null)
+            {
+                Console.WriteLine($"[WARN] FileBytes was null for transfer {e.FileRequest?.TransferId} from client {e.ClientId}");
+                return;
+            }
+
             JObject meta;
             try
             {
