@@ -51,6 +51,9 @@ namespace Sweep.Forms
                 counter.Visible = logsnum > 0;
             };
             usname.Text = usname.Text.Replace("%s", Global.Name);
+            _server.ClientConnected += (s, clientId) => {
+                _ = _server.SendMessageToClient(clientId, "ack"); // shush warning
+            };
         }
 
         private async void seescreen_Click(object sender, EventArgs e)
@@ -73,7 +76,7 @@ namespace Sweep.Forms
         private void Sweep_Load(object sender, EventArgs e)
         {
             portnum.Text = portnum.Text.Replace("%s", Global.Port.ToString());
-            //_ = StartAddingDummyClientsAsync();
+//            _ = StartAddingDummyClientsAsync();
         }
 
         private async void uACBypassToolStripMenuItem_Click(object sender, EventArgs e)

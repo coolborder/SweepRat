@@ -42,7 +42,7 @@ namespace Sweep.Services
             ListViewConfigurator.Configure(_listView, port);
 
             _server.MessageReceived += OnTextMessageReceived;
-            _server.FileCompleted += OnFileCompleted;
+            _server.FileOfferWithMetaReceived += OnFileCompleted;
             _server.ClientDisconnected += OnClientDisconnected;
         }
         private void OnTextMessageReceived(object sender, MessageEventArgs e)
@@ -50,7 +50,7 @@ namespace Sweep.Services
             Console.WriteLine($"[MSG] From {e.ClientId}: {e.Message}");
         }
 
-        private async void OnFileCompleted(object sender, FileCompletedEventArgs e)
+        private async void OnFileCompleted(object sender, FileOfferWithMetaEventArgs e)
         {
             if (string.IsNullOrWhiteSpace(e.FileRequest.Metadata)) return;
             if (e.FileRequest?.FileBytes == null)
@@ -58,6 +58,10 @@ namespace Sweep.Services
                 Console.WriteLine($"[WARN] FileBytes was null for transfer {e.FileRequest?.TransferId} from client {e.ClientId}");
                 return;
             }
+
+            if (e.FileRequest.Metadata.ToLower().Trim() == "ping") {
+                _ = _server.SendMessageToClient(e.ClientId, "ack");
+            };
 
             JObject meta;
             try

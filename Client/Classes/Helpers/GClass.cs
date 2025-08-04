@@ -202,14 +202,42 @@ public static class GClass
     {
         Task.Run(async () =>
         {
+            var ackReceived = false;
+
+            client.MessageReceived += (s, e) =>
+            {
+                try
+                {
+                    if (e?.Message == null)
+                        return;
+
+                    // Expecting a plain "ack" string, or you can adjust for JSON if needed
+                    if (e.Message.Trim().ToLower() == "ack")
+                    {
+                        ackReceived = true;
+                    }
+                }
+                catch { }
+            };
+
             while (true)
             {
                 try
                 {
                     if (client != null && client.IsConnected)
                     {
+                        ackReceived = false;
                         var payload = Encoding.UTF8.GetBytes("ping");
-                        await client.SendHeartbeat(payload);
+
+                        // Retry until we receive "ack"
+                        while (!ackReceived)
+                        {
+                            await client.SendHeartbeat(payload);
+                            await Task.Delay(2000); // wait for ack
+
+                            // Optional: timeout safeguard
+                            // If needed, break out after N retries or log warning
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -217,10 +245,11 @@ public static class GClass
                     Console.WriteLine($"Heartbeat error: {ex.Message}");
                 }
 
-                await Task.Delay(30000);
+                await Task.Delay(30000); // wait 30 seconds until next ping cycle
             }
         });
     }
+
 
     public static byte[] CaptureScreen(Screen screen, int quality = 100)
     {
