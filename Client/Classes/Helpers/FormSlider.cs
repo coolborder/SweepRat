@@ -47,7 +47,7 @@ public static class FormSlider
         };
 
         // Start message loop with the form
-        Application.Run(form);
+        form.Show();
     }
 
     public static void SlideOut(Form form, int speed = 10, int interval = 10)

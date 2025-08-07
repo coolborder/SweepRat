@@ -58,8 +58,8 @@
             this.yo.CharHeight = 14;
             this.yo.CharWidth = 8;
             this.yo.CommentPrefix = "\'";
+            this.yo.Cursor = System.Windows.Forms.Cursors.IBeam;
             this.yo.DisabledColor = System.Drawing.Color.FromArgb(((int)(((byte)(100)))), ((int)(((byte)(180)))), ((int)(((byte)(180)))), ((int)(((byte)(180)))));
-            this.yo.Font = new System.Drawing.Font("Courier New", 9.75F);
             this.yo.IsReplaceMode = false;
             this.yo.Language = FastColoredTextBoxNS.Language.VB;
             this.yo.LeftBracket = '(';
@@ -73,6 +73,7 @@
             this.yo.TabIndex = 0;
             this.yo.Text = resources.GetString("yo.Text");
             this.yo.Zoom = 100;
+            this.yo.TextChanged += new System.EventHandler<FastColoredTextBoxNS.TextChangedEventArgs>(this.yo_TextChanged);
             // 
             // execute
             // 

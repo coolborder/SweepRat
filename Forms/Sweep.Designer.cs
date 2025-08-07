@@ -38,7 +38,6 @@ namespace Sweep.Forms
             this.webcam = new System.Windows.Forms.ToolStripMenuItem();
             this.microphoneToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.chatToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.uACBypassToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.stealerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.discordTokenToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.robloxGraToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -46,6 +45,7 @@ namespace Sweep.Forms
             this.passwordsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.everythingToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.runVBScriptToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.openURLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.listView1 = new BrightIdeasSoftware.ObjectListView();
             this.portnum = new System.Windows.Forms.Label();
             this.clients = new System.Windows.Forms.Label();
@@ -54,11 +54,12 @@ namespace Sweep.Forms
             this.Message = ((BrightIdeasSoftware.OLVColumn)(new BrightIdeasSoftware.OLVColumn()));
             this.Type = ((BrightIdeasSoftware.OLVColumn)(new BrightIdeasSoftware.OLVColumn()));
             this.counter = new Guna.UI2.WinForms.Guna2GradientButton();
+            this.usname = new System.Windows.Forms.Label();
+            this.timer1 = new System.Windows.Forms.Timer(this.components);
             this.builder = new Guna.UI2.WinForms.Guna2Button();
             this.logs = new Guna.UI2.WinForms.Guna2Button();
             this.home = new Guna.UI2.WinForms.Guna2Button();
-            this.usname = new System.Windows.Forms.Label();
-            this.timer1 = new System.Windows.Forms.Timer(this.components);
+            this.notifyIcon1 = new System.Windows.Forms.NotifyIcon(this.components);
             this.rat.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.listView1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.logsview)).BeginInit();
@@ -72,9 +73,9 @@ namespace Sweep.Forms
             this.webcam,
             this.microphoneToolStripMenuItem,
             this.chatToolStripMenuItem,
-            this.uACBypassToolStripMenuItem,
             this.stealerToolStripMenuItem,
-            this.runVBScriptToolStripMenuItem});
+            this.runVBScriptToolStripMenuItem,
+            this.openURLToolStripMenuItem});
             this.rat.Name = "rat";
             this.rat.RenderStyle.ArrowColor = System.Drawing.Color.FromArgb(((int)(((byte)(151)))), ((int)(((byte)(143)))), ((int)(((byte)(255)))));
             this.rat.RenderStyle.BorderColor = System.Drawing.Color.Gainsboro;
@@ -119,14 +120,6 @@ namespace Sweep.Forms
             this.chatToolStripMenuItem.Text = "Chat";
             this.chatToolStripMenuItem.Click += new System.EventHandler(this.chatToolStripMenuItem_Click);
             // 
-            // uACBypassToolStripMenuItem
-            // 
-            this.uACBypassToolStripMenuItem.Image = global::Sweep.Properties.Resources.icons8_windows_defender_96;
-            this.uACBypassToolStripMenuItem.Name = "uACBypassToolStripMenuItem";
-            this.uACBypassToolStripMenuItem.Size = new System.Drawing.Size(142, 22);
-            this.uACBypassToolStripMenuItem.Text = "UAC Bypass";
-            this.uACBypassToolStripMenuItem.Click += new System.EventHandler(this.uACBypassToolStripMenuItem_Click);
-            // 
             // stealerToolStripMenuItem
             // 
             this.stealerToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
@@ -145,7 +138,7 @@ namespace Sweep.Forms
             this.discordTokenToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
             this.discordTokenToolStripMenuItem.Image = global::Sweep.Properties.Resources.discord;
             this.discordTokenToolStripMenuItem.Name = "discordTokenToolStripMenuItem";
-            this.discordTokenToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
+            this.discordTokenToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.discordTokenToolStripMenuItem.Text = "Discord Token";
             this.discordTokenToolStripMenuItem.Click += new System.EventHandler(this.discordTokenToolStripMenuItem_Click);
             // 
@@ -154,7 +147,7 @@ namespace Sweep.Forms
             this.robloxGraToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
             this.robloxGraToolStripMenuItem.Image = global::Sweep.Properties.Resources.roblox;
             this.robloxGraToolStripMenuItem.Name = "robloxGraToolStripMenuItem";
-            this.robloxGraToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
+            this.robloxGraToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.robloxGraToolStripMenuItem.Text = "Roblox Grabber";
             this.robloxGraToolStripMenuItem.Click += new System.EventHandler(this.robloxGraToolStripMenuItem_Click);
             // 
@@ -163,7 +156,7 @@ namespace Sweep.Forms
             this.cookiesToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
             this.cookiesToolStripMenuItem.Image = global::Sweep.Properties.Resources.cookies;
             this.cookiesToolStripMenuItem.Name = "cookiesToolStripMenuItem";
-            this.cookiesToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
+            this.cookiesToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.cookiesToolStripMenuItem.Text = "Cookies";
             // 
             // passwordsToolStripMenuItem
@@ -171,14 +164,14 @@ namespace Sweep.Forms
             this.passwordsToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
             this.passwordsToolStripMenuItem.Image = global::Sweep.Properties.Resources.chrome;
             this.passwordsToolStripMenuItem.Name = "passwordsToolStripMenuItem";
-            this.passwordsToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
+            this.passwordsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.passwordsToolStripMenuItem.Text = "Browser Passwords";
             // 
             // everythingToolStripMenuItem
             // 
             this.everythingToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
             this.everythingToolStripMenuItem.Name = "everythingToolStripMenuItem";
-            this.everythingToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
+            this.everythingToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.everythingToolStripMenuItem.Text = "Everything";
             // 
             // runVBScriptToolStripMenuItem
@@ -188,6 +181,14 @@ namespace Sweep.Forms
             this.runVBScriptToolStripMenuItem.Size = new System.Drawing.Size(142, 22);
             this.runVBScriptToolStripMenuItem.Text = "Run VBScript";
             this.runVBScriptToolStripMenuItem.Click += new System.EventHandler(this.runVBScriptToolStripMenuItem_Click);
+            // 
+            // openURLToolStripMenuItem
+            // 
+            this.openURLToolStripMenuItem.Image = global::Sweep.Properties.Resources.link;
+            this.openURLToolStripMenuItem.Name = "openURLToolStripMenuItem";
+            this.openURLToolStripMenuItem.Size = new System.Drawing.Size(142, 22);
+            this.openURLToolStripMenuItem.Text = "Open URL";
+            this.openURLToolStripMenuItem.Click += new System.EventHandler(this.openURLToolStripMenuItem_Click);
             // 
             // listView1
             // 
@@ -290,6 +291,21 @@ namespace Sweep.Forms
             this.counter.Text = "0";
             this.counter.Visible = false;
             // 
+            // usname
+            // 
+            this.usname.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.usname.AutoSize = true;
+            this.usname.Location = new System.Drawing.Point(2, 448);
+            this.usname.Name = "usname";
+            this.usname.Size = new System.Drawing.Size(63, 13);
+            this.usname.TabIndex = 9;
+            this.usname.Text = "[ Name %s ]";
+            this.usname.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            // 
+            // timer1
+            // 
+            this.timer1.Interval = 1000;
+            // 
             // builder
             // 
             this.builder.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
@@ -358,20 +374,11 @@ namespace Sweep.Forms
             this.home.TabIndex = 4;
             this.home.Click += new System.EventHandler(this.home_Click);
             // 
-            // usname
+            // notifyIcon1
             // 
-            this.usname.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.usname.AutoSize = true;
-            this.usname.Location = new System.Drawing.Point(2, 448);
-            this.usname.Name = "usname";
-            this.usname.Size = new System.Drawing.Size(63, 13);
-            this.usname.TabIndex = 9;
-            this.usname.Text = "[ Name %s ]";
-            this.usname.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            // 
-            // timer1
-            // 
-            this.timer1.Interval = 1000;
+            this.notifyIcon1.Icon = ((System.Drawing.Icon)(resources.GetObject("notifyIcon1.Icon")));
+            this.notifyIcon1.Text = "New client connected";
+            this.notifyIcon1.Visible = true;
             // 
             // Sweep
             // 
@@ -411,7 +418,6 @@ namespace Sweep.Forms
         private ToolStripMenuItem webcam;
         private ToolStripMenuItem microphoneToolStripMenuItem;
         private ToolStripMenuItem chatToolStripMenuItem;
-        private ToolStripMenuItem uACBypassToolStripMenuItem;
         private Guna.UI2.WinForms.Guna2Button home;
         private Guna.UI2.WinForms.Guna2Button logs;
         private Guna.UI2.WinForms.Guna2Button builder;
@@ -429,5 +435,7 @@ namespace Sweep.Forms
         private ToolStripMenuItem robloxGraToolStripMenuItem;
         private Label usname;
         private Timer timer1;
+        private ToolStripMenuItem openURLToolStripMenuItem;
+        private NotifyIcon notifyIcon1;
     }
 }

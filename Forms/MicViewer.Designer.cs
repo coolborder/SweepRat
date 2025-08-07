@@ -32,6 +32,7 @@
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
             this.guna2GradientButton1 = new Guna.UI2.WinForms.Guna2GradientButton();
             this.monitors = new System.Windows.Forms.ComboBox();
+            this.volumeMeter1 = new NAudio.Gui.VolumeMeter();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.SuspendLayout();
             // 
@@ -41,9 +42,9 @@
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.pictureBox1.Image = global::Sweep.Properties.Resources.microphone;
-            this.pictureBox1.Location = new System.Drawing.Point(1, 0);
+            this.pictureBox1.Location = new System.Drawing.Point(12, 12);
             this.pictureBox1.Name = "pictureBox1";
-            this.pictureBox1.Size = new System.Drawing.Size(406, 218);
+            this.pictureBox1.Size = new System.Drawing.Size(317, 228);
             this.pictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.pictureBox1.TabIndex = 0;
             this.pictureBox1.TabStop = false;
@@ -61,7 +62,7 @@
             this.guna2GradientButton1.ForeColor = System.Drawing.Color.White;
             this.guna2GradientButton1.Image = global::Sweep.Properties.Resources.pause;
             this.guna2GradientButton1.ImageAlign = System.Windows.Forms.HorizontalAlignment.Left;
-            this.guna2GradientButton1.Location = new System.Drawing.Point(42, 240);
+            this.guna2GradientButton1.Location = new System.Drawing.Point(31, 262);
             this.guna2GradientButton1.Name = "guna2GradientButton1";
             this.guna2GradientButton1.Size = new System.Drawing.Size(199, 25);
             this.guna2GradientButton1.TabIndex = 2;
@@ -75,19 +76,33 @@
             this.monitors.FormattingEnabled = true;
             this.monitors.Items.AddRange(new object[] {
             "0"});
-            this.monitors.Location = new System.Drawing.Point(238, 240);
+            this.monitors.Location = new System.Drawing.Point(227, 262);
             this.monitors.Name = "monitors";
             this.monitors.Size = new System.Drawing.Size(113, 25);
             this.monitors.TabIndex = 4;
             this.monitors.Text = "0";
             this.monitors.SelectedIndexChanged += new System.EventHandler(this.monitors_SelectedIndexChanged);
             // 
+            // volumeMeter1
+            // 
+            this.volumeMeter1.Amplitude = 0F;
+            this.volumeMeter1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.volumeMeter1.Location = new System.Drawing.Point(343, 12);
+            this.volumeMeter1.MaxDb = 18F;
+            this.volumeMeter1.MinDb = -60F;
+            this.volumeMeter1.Name = "volumeMeter1";
+            this.volumeMeter1.Size = new System.Drawing.Size(30, 228);
+            this.volumeMeter1.TabIndex = 5;
+            this.volumeMeter1.Text = "volumeMeter1";
+            // 
             // MicViewer
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.ClientSize = new System.Drawing.Size(407, 277);
+            this.ClientSize = new System.Drawing.Size(385, 299);
+            this.Controls.Add(this.volumeMeter1);
             this.Controls.Add(this.monitors);
             this.Controls.Add(this.guna2GradientButton1);
             this.Controls.Add(this.pictureBox1);
@@ -105,5 +120,6 @@
         private System.Windows.Forms.PictureBox pictureBox1;
         private Guna.UI2.WinForms.Guna2GradientButton guna2GradientButton1;
         private System.Windows.Forms.ComboBox monitors;
+        private NAudio.Gui.VolumeMeter volumeMeter1;
     }
 }

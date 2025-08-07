@@ -24,7 +24,6 @@ namespace VirtualizationDetection
 
     public static class VMDetector
     {
-        // P/Invoke constants & structs for CreateFile
         private const uint GENERIC_READ = 0x80000000;
         private const uint FILE_SHARE_READ = 0x00000001;
         private const uint OPEN_EXISTING = 3;
@@ -52,30 +51,24 @@ namespace VirtualizationDetection
 
         public static VmType Detect()
         {
-            // Use scoring system to reduce false positives
             var scores = new Dictionary<VmType, int>();
 
-            // Windows Sandbox detection
             var sandboxScore = GetWindowsSandboxScore();
-            if (sandboxScore >= 2) // Require multiple indicators
+            if (sandboxScore >= 2)
                 return VmType.WindowsSandbox;
 
-            // AnyRun detection
             var anyRunScore = GetAnyRunScore();
-            if (anyRunScore >= 3) // Require multiple strong indicators
+            if (anyRunScore >= 3)
                 return VmType.AnyRun;
 
-            // VMware detection
             var vmwareScore = GetVMwareScore();
             if (vmwareScore >= 2)
                 return VmType.VMware;
 
-            // VirtualBox detection  
             var vboxScore = GetVirtualBoxScore();
             if (vboxScore >= 2)
                 return VmType.VirtualBox;
 
-            // QEMU detection
             var qemuScore = GetQEMUScore();
             if (qemuScore >= 2)
                 return VmType.QEMU;
@@ -89,64 +82,54 @@ namespace VirtualizationDetection
 
             try
             {
-                // 1) Certificate check - but be more specific
                 using (var store = new X509Store(StoreName.Root, StoreLocation.CurrentUser))
                 {
                     store.Open(OpenFlags.ReadOnly);
                     var anyCerts = store.Certificates.Cast<X509Certificate2>().Where(cert =>
                         (cert.Subject.IndexOf("any.run", StringComparison.OrdinalIgnoreCase) >= 0 ||
                          cert.Issuer.IndexOf("any.run", StringComparison.OrdinalIgnoreCase) >= 0) &&
-                        cert.Subject.IndexOf("legitimate", StringComparison.OrdinalIgnoreCase) < 0 // Avoid catching legitimate certs
-                    );
+                        cert.Subject.IndexOf("legitimate", StringComparison.OrdinalIgnoreCase) < 0);
 
                     if (anyCerts.Any())
-                        score += 2; // Strong indicator
+                        score += 2;
                 }
 
-                // 2) Process + DLL check - more targeted
-                try
+                var procs = Process.GetProcessesByName("srvpost");
+                foreach (var p in procs)
                 {
-                    var procs = Process.GetProcessesByName("srvpost");
-                    foreach (var p in procs)
+                    try
                     {
-                        try
+                        foreach (ProcessModule m in p.Modules)
                         {
-                            foreach (ProcessModule m in p.Modules)
+                            var name = m.ModuleName.ToLowerInvariant();
+                            if (name == "winanr.dll" || name == "winsanr.dll")
                             {
-                                var name = m.ModuleName.ToLowerInvariant();
-                                if (name == "winanr.dll" || name == "winsanr.dll") // Exact match
-                                {
-                                    score += 2;
-                                    break;
-                                }
+                                score += 2;
+                                break;
                             }
                         }
-                        catch { /* Process may have exited */ }
                     }
+                    catch { }
                 }
-                catch { /* Process access denied */ }
 
-                // 3) Device symbolic check
-                var h = CreateFile(@"\\.\A3E64E55_fl",
+                var h = CreateFile(@"\\\\.\\A3E64E55_fl",
                                    GENERIC_READ, 0, IntPtr.Zero, OPEN_EXISTING, 0, IntPtr.Zero);
                 if (h != INVALID_HANDLE_VALUE)
                 {
                     CloseHandle(h);
-                    score += 2; // Strong indicator
+                    score += 2;
                 }
 
-                // 4) Registry service check - more specific
                 try
                 {
                     using (var key = Registry.LocalMachine.OpenSubKey(
-                        @"SYSTEM\CurrentControlSet\Services\KernelLogger"))
+                        @"SYSTEM\\CurrentControlSet\\Services\\KernelLogger"))
                     {
                         if (key != null)
                         {
                             var displayName = key.GetValue("DisplayName")?.ToString();
                             var imagePath = key.GetValue("ImagePath")?.ToString();
 
-                            // Check if it's actually the AnyRun service, not just any KernelLogger
                             if (displayName != null && displayName.IndexOf("any.run", StringComparison.OrdinalIgnoreCase) >= 0 ||
                                 imagePath != null && imagePath.IndexOf("any.run", StringComparison.OrdinalIgnoreCase) >= 0)
                             {
@@ -155,12 +138,8 @@ namespace VirtualizationDetection
                         }
                     }
                 }
-                catch { /* Registry access denied */ }
+                catch { }
 
-                // 5) Remove the directory existence check - too many false positives
-                // Many legitimate programs create directories with similar names
-
-                // 6) WMI service check - be more specific
                 try
                 {
                     using (var searcher = new ManagementObjectSearcher(
@@ -176,12 +155,9 @@ namespace VirtualizationDetection
                         }
                     }
                 }
-                catch { /* WMI access issues */ }
+                catch { }
             }
-            catch
-            {
-                // Swallow exceptions but don't assume it's a VM
-            }
+            catch { }
 
             return score;
         }
@@ -192,17 +168,14 @@ namespace VirtualizationDetection
 
             try
             {
-                // 1) Check for WDAG user - exact match
                 var user = Environment.UserName;
                 if (string.Equals(user, "WDAGUtilityAccount", StringComparison.OrdinalIgnoreCase))
                     score += 2;
 
-                // 2) Check machine name - exact prefix
                 var machine = Environment.MachineName;
                 if (machine.StartsWith("WDAG", StringComparison.OrdinalIgnoreCase))
                     score += 2;
 
-                // 3) Check for sandbox-specific services
                 try
                 {
                     using (var searcher = new ManagementObjectSearcher(
@@ -212,24 +185,20 @@ namespace VirtualizationDetection
                             score += 1;
                     }
                 }
-                catch { /* WMI issues */ }
+                catch { }
 
-                // 4) Check for Windows Sandbox-specific registry entries
                 try
                 {
-                    using (var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion"))
+                    using (var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion"))
                     {
                         var productName = key?.GetValue("ProductName")?.ToString();
                         if (productName != null && productName.IndexOf("Windows Sandbox", StringComparison.OrdinalIgnoreCase) >= 0)
                             score += 2;
                     }
                 }
-                catch { /* Registry access denied */ }
+                catch { }
             }
-            catch
-            {
-                // Ignore exceptions
-            }
+            catch { }
 
             return score;
         }
@@ -240,33 +209,19 @@ namespace VirtualizationDetection
 
             try
             {
-                // Check MAC addresses
                 if (HasVMwareMac())
                     score += 1;
 
-                // Check for VMware-specific processes
                 var vmwareProcesses = new[] { "vmtoolsd", "vmwaretray", "vmwareuser" };
                 foreach (var procName in vmwareProcesses)
                 {
                     if (Process.GetProcessesByName(procName).Length > 0)
                     {
                         score += 1;
-                        break; // Don't stack points for multiple processes
+                        break;
                     }
                 }
 
-                // Check registry for VMware
-                try
-                {
-                    using (var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\VMware, Inc.\VMware Tools"))
-                    {
-                        if (key != null)
-                            score += 2;
-                    }
-                }
-                catch { }
-
-                // Check WMI for VMware strings
                 var biosVersion = GetWmiProperty("Win32_BIOS", "Version");
                 if (!string.IsNullOrEmpty(biosVersion) && biosVersion.IndexOf("VMware", StringComparison.OrdinalIgnoreCase) >= 0)
                     score += 1;
@@ -286,11 +241,9 @@ namespace VirtualizationDetection
 
             try
             {
-                // Check MAC addresses
                 if (HasVirtualBoxMac())
                     score += 1;
 
-                // Check for VirtualBox processes
                 var vboxProcesses = new[] { "VBoxService", "VBoxTray" };
                 foreach (var procName in vboxProcesses)
                 {
@@ -301,26 +254,15 @@ namespace VirtualizationDetection
                     }
                 }
 
-                // Check WMI for VirtualBox
                 var biosVersion = GetWmiProperty("Win32_BIOS", "Version");
                 if (!string.IsNullOrEmpty(biosVersion) && biosVersion.IndexOf("VirtualBox", StringComparison.OrdinalIgnoreCase) >= 0)
                     score += 1;
 
                 var manufacturer = GetWmiProperty("Win32_ComputerSystem", "Manufacturer");
-                if (!string.IsNullOrEmpty(manufacturer) && (manufacturer.IndexOf("innotek", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                    manufacturer.IndexOf("Oracle", StringComparison.OrdinalIgnoreCase) >= 0))
+                if (!string.IsNullOrEmpty(manufacturer) &&
+                    (manufacturer.IndexOf("innotek", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                     manufacturer.IndexOf("Oracle", StringComparison.OrdinalIgnoreCase) >= 0))
                     score += 1;
-
-                // Check for VirtualBox guest additions
-                try
-                {
-                    using (var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Oracle\VirtualBox Guest Additions"))
-                    {
-                        if (key != null)
-                            score += 2;
-                    }
-                }
-                catch { }
             }
             catch { }
 
@@ -333,11 +275,9 @@ namespace VirtualizationDetection
 
             try
             {
-                // Check MAC addresses
                 if (HasQEMUMac())
                     score += 1;
 
-                // Check WMI for QEMU
                 var manufacturer = GetWmiProperty("Win32_ComputerSystem", "Manufacturer");
                 if (!string.IsNullOrEmpty(manufacturer) && manufacturer.IndexOf("QEMU", StringComparison.OrdinalIgnoreCase) >= 0)
                     score += 2;
@@ -351,20 +291,9 @@ namespace VirtualizationDetection
             return score;
         }
 
-        private static bool HasVMwareMac()
-        {
-            return HasMacFromOui(MacOuis[VmType.VMware]);
-        }
-
-        private static bool HasVirtualBoxMac()
-        {
-            return HasMacFromOui(MacOuis[VmType.VirtualBox]);
-        }
-
-        private static bool HasQEMUMac()
-        {
-            return HasMacFromOui(MacOuis[VmType.QEMU]);
-        }
+        private static bool HasVMwareMac() => HasMacFromOui(MacOuis[VmType.VMware]);
+        private static bool HasVirtualBoxMac() => HasMacFromOui(MacOuis[VmType.VirtualBox]);
+        private static bool HasQEMUMac() => HasMacFromOui(MacOuis[VmType.QEMU]);
 
         private static bool HasMacFromOui(string[] ouis)
         {
@@ -388,22 +317,6 @@ namespace VirtualizationDetection
             return false;
         }
 
-        private static string GetCommandLine(int processId)
-        {
-            try
-            {
-                using (var searcher = new ManagementObjectSearcher($"SELECT CommandLine FROM Win32_Process WHERE ProcessId = {processId}"))
-                {
-                    foreach (ManagementObject obj in searcher.Get())
-                    {
-                        return obj["CommandLine"]?.ToString() ?? "";
-                    }
-                }
-            }
-            catch { }
-            return "";
-        }
-
         private static string GetWmiProperty(string wmiClass, string property)
         {
             try
@@ -418,10 +331,7 @@ namespace VirtualizationDetection
                     }
                 }
             }
-            catch
-            {
-                // Ignore
-            }
+            catch { }
             return null;
         }
     }

@@ -47,11 +47,11 @@
             this.input.Font = new System.Drawing.Font("Segoe UI", 9F);
             this.input.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(64)))), ((int)(((byte)(64)))), ((int)(((byte)(64)))));
             this.input.HoverState.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(94)))), ((int)(((byte)(148)))), ((int)(((byte)(255)))));
-            this.input.Location = new System.Drawing.Point(12, 395);
+            this.input.Location = new System.Drawing.Point(12, 387);
             this.input.Name = "input";
             this.input.PlaceholderText = "Message here...";
             this.input.SelectedText = "";
-            this.input.Size = new System.Drawing.Size(236, 31);
+            this.input.Size = new System.Drawing.Size(262, 31);
             this.input.TabIndex = 0;
             // 
             // guna2GradientButton1
@@ -65,7 +65,7 @@
             this.guna2GradientButton1.DisabledState.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(141)))), ((int)(((byte)(141)))), ((int)(((byte)(141)))));
             this.guna2GradientButton1.Font = new System.Drawing.Font("Segoe UI", 9F);
             this.guna2GradientButton1.ForeColor = System.Drawing.Color.White;
-            this.guna2GradientButton1.Location = new System.Drawing.Point(255, 395);
+            this.guna2GradientButton1.Location = new System.Drawing.Point(281, 387);
             this.guna2GradientButton1.Name = "guna2GradientButton1";
             this.guna2GradientButton1.Size = new System.Drawing.Size(61, 31);
             this.guna2GradientButton1.TabIndex = 1;
@@ -93,7 +93,7 @@
             this.chatb.ReadOnly = true;
             this.chatb.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
             this.chatb.SelectedText = "";
-            this.chatb.Size = new System.Drawing.Size(304, 377);
+            this.chatb.Size = new System.Drawing.Size(330, 369);
             this.chatb.TabIndex = 2;
             // 
             // Chat
@@ -101,7 +101,7 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.White;
-            this.ClientSize = new System.Drawing.Size(328, 438);
+            this.ClientSize = new System.Drawing.Size(354, 430);
             this.Controls.Add(this.chatb);
             this.Controls.Add(this.guna2GradientButton1);
             this.Controls.Add(this.input);

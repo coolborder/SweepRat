@@ -295,7 +295,9 @@ namespace Sweep.Services
                     var viewer = new MicViewer();
                     micViewers[clientId] = viewer;
 
-                    viewer.SetMonitors((int)meta["microphones"]);
+                    var devices = (JArray)meta["devices"];
+
+                    viewer.SetMics(devices.ToObject<string[]>());
 
                     viewer.Mic += async (active) =>
                     {
@@ -388,6 +390,8 @@ namespace Sweep.Services
                     ["message"] = $"Client connected {clientId}",
                     ["type"] = "Info"
                 });
+                _sweepform?.ShowClientConnectedNotification($"IP: {ip} Country: {country}");
+
             }
             catch (Exception ex)
             {

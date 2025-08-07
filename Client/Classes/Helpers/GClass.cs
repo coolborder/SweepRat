@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PentestTools;
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -405,6 +406,41 @@ public static class GClass
     private const uint MOUSEEVENTF_WHEEL = 0x0800;
     [DllImport("user32.dll")]
     private static extern bool SetCursorPos(int X, int Y);
+    private static readonly Dictionary<string, string> SpecialKeyMap = new()
+    {
+        ["enter"] = "{ENTER}",
+        ["tab"] = "{TAB}",
+        ["backspace"] = "{BACKSPACE}",
+        ["escape"] = "{ESC}",
+        ["esc"] = "{ESC}",
+        ["space"] = "{SPACE}",
+        ["left"] = "{LEFT}",
+        ["right"] = "{RIGHT}",
+        ["up"] = "{UP}",
+        ["down"] = "{DOWN}",
+        ["delete"] = "{DELETE}",
+        ["insert"] = "{INSERT}",
+        ["home"] = "{HOME}",
+        ["end"] = "{END}",
+        ["pageup"] = "{PGUP}",
+        ["pagedown"] = "{PGDN}",
+        ["capslock"] = "{CAPSLOCK}",
+        ["numlock"] = "{NUMLOCK}",
+        ["scrolllock"] = "{SCROLLLOCK}",
+        ["f1"] = "{F1}",
+        ["f2"] = "{F2}",
+        ["f3"] = "{F3}",
+        ["f4"] = "{F4}",
+        ["f5"] = "{F5}",
+        ["f6"] = "{F6}",
+        ["f7"] = "{F7}",
+        ["f8"] = "{F8}",
+        ["f9"] = "{F9}",
+        ["f10"] = "{F10}",
+        ["f11"] = "{F11}",
+        ["f12"] = "{F12}"
+    };
+
     public static void MouseMoveAbsolute(int x, int y)
     {
         SetCursorPos(x, y);
@@ -433,57 +469,20 @@ public static class GClass
     {
         mouse_event(MOUSEEVENTF_WHEEL, 0, 0, (uint)delta, UIntPtr.Zero);
     }
-
     public static void SendKeyPress(string keyName)
     {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(keyName))
-                return;
+        if (string.IsNullOrWhiteSpace(keyName))
+            return;
 
-            // Handle special keys with SendKeys format
-            string sendKey = keyName.ToLower() switch
-            {
-                "enter" => "{ENTER}",
-                "tab" => "{TAB}",
-                "backspace" => "{BACKSPACE}",
-                "esc" or "escape" => "{ESC}",
-                "space" => " ",
-                "left" => "{LEFT}",
-                "right" => "{RIGHT}",
-                "up" => "{UP}",
-                "down" => "{DOWN}",
-                "delete" => "{DELETE}",
-                "insert" => "{INSERT}",
-                "home" => "{HOME}",
-                "end" => "{END}",
-                "pageup" => "{PGUP}",
-                "pagedown" => "{PGDN}",
-                "capslock" => "{CAPSLOCK}",
-                "numlock" => "{NUMLOCK}",
-                "scrolllock" => "{SCROLLLOCK}",
-                "f1" => "{F1}",
-                "f2" => "{F2}",
-                "f3" => "{F3}",
-                "f4" => "{F4}",
-                "f5" => "{F5}",
-                "f6" => "{F6}",
-                "f7" => "{F7}",
-                "f8" => "{F8}",
-                "f9" => "{F9}",
-                "f10" => "{F10}",
-                "f11" => "{F11}",
-                "f12" => "{F12}",
-                _ => EscapeIfNeeded(keyName)
-            };
+        string lower = keyName.ToLower();
 
-            SendKeys.SendWait(sendKey);
-        }
-        catch
-        {
-            // Optional: log or handle
-        }
+        string sendKey = SpecialKeyMap.TryGetValue(lower, out var mappedKey)
+            ? mappedKey
+            : EscapeIfNeeded(keyName);
+
+        SendKeys.SendWait(sendKey);
     }
+
 
     private static string EscapeIfNeeded(string key)
     {

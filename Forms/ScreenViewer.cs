@@ -124,7 +124,7 @@ namespace Sweep.Forms
                 case Keys.Escape: return "Escape";
                 case Keys.Tab: return "Tab";
                 case Keys.Back: return "Backspace";
-                case Keys.Space: return " ";
+                case Keys.Space: Console.WriteLine("we're spacing"); return " ";
                 case Keys.Left: return "Left";
                 case Keys.Right: return "Right";
                 case Keys.Up: return "Up";

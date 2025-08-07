@@ -20,6 +20,11 @@ namespace Sweep.Forms
         {
             InitializeComponent();
         }
+        public void SetMics(object[] devices)
+        {
+            monitors.Items.Clear();
+            monitors.Items.AddRange(devices);
+        }
         public void SetMonitors(int idx)
         {
             monitors.Items.Clear();
@@ -30,7 +35,7 @@ namespace Sweep.Forms
         }
         private void monitors_SelectedIndexChanged(object sender, EventArgs e)
         {
-            DeviceChanged.Invoke(Int32.Parse(monitors.Text));
+            DeviceChanged.Invoke(monitors.SelectedIndex);
         }
 
         private void guna2GradientButton1_Click(object sender, EventArgs e)

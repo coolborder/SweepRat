@@ -1,4 +1,7 @@
-﻿using System;
+﻿using MaxMind.GeoIP2;
+using MaxMind.GeoIP2.Exceptions;
+using MaxMind.GeoIP2.Responses;
+using System;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
@@ -8,87 +11,118 @@ using System.Windows.Forms;
 
 public class FlagDownloader
 {
-    private static readonly HttpClient httpClient = new HttpClient();
+    private static readonly string geoLiteDbPath = @"./Extra/GeoLite2-Country.mmdb";
+
     public static async Task<string> GetCountryAsync(string ip)
     {
         string countryCode = "AQ"; // Default fallback
 
         try
         {
-            string apiUrl = $"https://ipapi.co/{ip}/country/";
-            HttpResponseMessage response = await httpClient.GetAsync(apiUrl);
-            if (response.IsSuccessStatusCode)
+            using (var reader = new DatabaseReader(geoLiteDbPath))
             {
-                countryCode = (await response.Content.ReadAsStringAsync()).Trim().ToUpper();
+                CountryResponse response = reader.Country(ip);
+                countryCode = response?.Country?.IsoCode ?? "AQ";
             }
         }
-        catch
-        {}
+        catch (GeoIP2Exception)
+        {
+            Console.WriteLine("IP Not found in DB: " + geoLiteDbPath);
+        }
+        catch (IOException)
+        {
+            Console.WriteLine("Database file not found: " + geoLiteDbPath);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("An error occurred while reading the database: " + ex.Message);
+        }
 
-        if (countryCode == "AQ") {
+        if (countryCode == "AQ")
+        {
             return "Agartha"; // real mature of me
         }
 
-        RegionInfo myRI1 = new RegionInfo(countryCode);
-
-        return myRI1.EnglishName;
+        RegionInfo region = new RegionInfo(countryCode);
+        return region.EnglishName;
     }
 
     public static async Task<Image> GetFlagByCountryAsync(string countryCode)
     {
-        string flagUrl = $"https://flagcdn.com/h240/{countryCode.ToLower()}.png";
+        string localFlagPath = $"./Extra/Flags/{countryCode.ToLower()}.png";
+        string fallbackFlagPath = "./Extra/Flags/aq.png";
 
         try
         {
-            byte[] imageBytes = await httpClient.GetByteArrayAsync(flagUrl);
-            return ByteArrayToImage(imageBytes);
-        }
-        catch
-        {
-            try
+            if (File.Exists(localFlagPath))
             {
-                byte[] fallbackBytes = await httpClient.GetByteArrayAsync("https://flagcdn.com/h240/aq.png");
-                return ByteArrayToImage(fallbackBytes);
+                using (FileStream fs = new FileStream(localFlagPath, FileMode.Open, FileAccess.Read))
+                {
+                    return Image.FromStream(fs);
+                }
             }
-            catch
+            else if (File.Exists(fallbackFlagPath))
+            {
+                using (FileStream fs = new FileStream(fallbackFlagPath, FileMode.Open, FileAccess.Read))
+                {
+                    return Image.FromStream(fs);
+                }
+            }
+            else
             {
                 return null;
             }
         }
+        catch
+        {
+            return null;
+        }
     }
+
     public static async Task<Image> GetFlagImageByIpAsync(string ip)
     {
         string countryCode = "AQ"; // Default fallback
 
         try
         {
-            string apiUrl = $"https://ipapi.co/{ip}/country/";
-            HttpResponseMessage response = await httpClient.GetAsync(apiUrl);
-            if (response.IsSuccessStatusCode)
+            using (var reader = new DatabaseReader(geoLiteDbPath))
             {
-                countryCode = (await response.Content.ReadAsStringAsync()).Trim().ToUpper();
+                CountryResponse response = reader.Country(ip);
+                countryCode = response?.Country?.IsoCode ?? "AQ";
             }
-        }
-        catch { }
-
-        string flagUrl = $"https://flagcdn.com/h240/{countryCode.ToLower()}.png";
-
-        try
-        {
-            byte[] imageBytes = await httpClient.GetByteArrayAsync(flagUrl);
-            return ByteArrayToImage(imageBytes);
         }
         catch
         {
-            try
+            // fallback remains AQ
+        }
+
+        string localFlagPath = $"./Extra/Flags/{countryCode.ToLower()}.png";
+        string fallbackFlagPath = "./Extra/Flags/aq.png";
+
+        try
+        {
+            if (File.Exists(localFlagPath))
             {
-                byte[] fallbackBytes = await httpClient.GetByteArrayAsync("https://flagcdn.com/h240/aq.png");
-                return ByteArrayToImage(fallbackBytes);
+                using (FileStream fs = new FileStream(localFlagPath, FileMode.Open, FileAccess.Read))
+                {
+                    return Image.FromStream(fs);
+                }
             }
-            catch
+            else if (File.Exists(fallbackFlagPath))
+            {
+                using (FileStream fs = new FileStream(fallbackFlagPath, FileMode.Open, FileAccess.Read))
+                {
+                    return Image.FromStream(fs);
+                }
+            }
+            else
             {
                 return null;
             }
+        }
+        catch
+        {
+            return null;
         }
     }
 
