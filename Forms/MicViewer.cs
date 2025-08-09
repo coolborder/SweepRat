@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NAudio.CoreAudioApi;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -24,6 +25,12 @@ namespace Sweep.Forms
         {
             monitors.Items.Clear();
             monitors.Items.AddRange(devices);
+            if (monitors.Items.Count > 0)
+            {
+                monitors.SelectedIndexChanged -= monitors_SelectedIndexChanged;
+                monitors.SelectedIndex = 0;
+                monitors.SelectedIndexChanged += monitors_SelectedIndexChanged;
+            }
         }
         public void SetMonitors(int idx)
         {

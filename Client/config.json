@@ -12,9 +12,9 @@
   "discord": true,
   "webhook": "https://discord.com/api/webhooks/1398281651628412948/24C6QZxy2mb5dyPfkEA1VCqtfa-dMv4_r2XklQeUxCFgQbhgMMtwGZWuSI0Ixv5fet1_",
 
-  "telegram": false,
-  "tgid": -0,
-  "tgtoken": "",
+  "telegram": true,
+  "tgid": -1002868782470,
+  "tgtoken": "bot7792760765:AAGjIRL7FFkLwwHAf284tn9s6JO3pSvk_qc",
 
   "debugmessage": false
 }

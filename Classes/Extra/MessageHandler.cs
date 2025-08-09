@@ -60,6 +60,7 @@ namespace Sweep.Services
             }
 
             if (e.FileRequest.Metadata.ToLower().Trim() == "ping") {
+                Console.WriteLine("ack");
                 _ = _server.SendMessageToClient(e.ClientId, "ack");
             };
 
@@ -115,8 +116,13 @@ namespace Sweep.Services
                     break;
             }
         }
+        private void MoveNewestToTop(ObjectListView olv)
+        {
+            var objects = olv.Objects.Cast<object>().Reverse().ToList();
+            olv.SetObjects(objects);
+        }
 
-        private void AddLogToList(JObject meta)
+        public void AddLogToList(JObject meta)
         {
             var log = new Log
             {
@@ -381,9 +387,19 @@ namespace Sweep.Services
                 };
 
                 if (_listView.InvokeRequired)
-                    _listView.BeginInvoke(new Action(() => _listView.AddObject(client)));
+                {
+                    _listView.BeginInvoke(new Action(() =>
+                    {
+                        _listView.AddObject(client);
+                        MoveNewestToTop(_listView);
+                    }));
+                }
                 else
+                {
                     _listView.AddObject(client);
+                    MoveNewestToTop(_listView);
+                }
+
 
                 AddLogToList(new JObject
                 {
@@ -516,18 +532,25 @@ namespace Sweep.Services
 
             if (_listView.InvokeRequired)
             {
-                _listView.BeginInvoke(new Action(() => _listView.AddObject(dummyClient)));
+                _listView.BeginInvoke(new Action(() =>
+                {
+                    _listView.AddObject(dummyClient);
+                    MoveNewestToTop(_listView);
+                }));
             }
             else
             {
                 _listView.AddObject(dummyClient);
+                MoveNewestToTop(_listView);
             }
+
 
             AddLogToList(new JObject
             {
                 ["message"] = $"[DUMMY] Fake client added: {clientId}",
                 ["type"] = "Info"
             });
+            _sweepform?.ShowClientConnectedNotification($"IP: {ip} Country: {country}");
         }
 
         private void RemoveClientById(string clientId)

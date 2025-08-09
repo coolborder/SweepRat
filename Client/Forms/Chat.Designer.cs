@@ -53,6 +53,7 @@
             this.input.SelectedText = "";
             this.input.Size = new System.Drawing.Size(262, 31);
             this.input.TabIndex = 0;
+            this.input.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.input_KeyPress);
             // 
             // guna2GradientButton1
             // 
@@ -70,6 +71,7 @@
             this.guna2GradientButton1.Size = new System.Drawing.Size(61, 31);
             this.guna2GradientButton1.TabIndex = 1;
             this.guna2GradientButton1.Text = "Send";
+            this.guna2GradientButton1.Click += new System.EventHandler(this.guna2GradientButton1_Click);
             // 
             // chatb
             // 
@@ -110,6 +112,7 @@
             this.Name = "Chat";
             this.Text = "Chat";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Chat_FormClosing);
+            this.Load += new System.EventHandler(this.Chat_Load);
             this.ResumeLayout(false);
 
         }
