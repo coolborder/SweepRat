@@ -38,7 +38,6 @@ namespace Sweep.Forms
             this.webcam = new System.Windows.Forms.ToolStripMenuItem();
             this.microphoneToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.chatToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.openURLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.actionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.stealerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.discordTokenToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -49,7 +48,12 @@ namespace Sweep.Forms
             this.runFileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.fromPCToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.fromURLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.openURLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.runVBScriptToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.funToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.triggerBSODToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.messageBoxToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.setWallpaperToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.listView1 = new BrightIdeasSoftware.ObjectListView();
             this.portnum = new System.Windows.Forms.Label();
             this.clients = new System.Windows.Forms.Label();
@@ -78,8 +82,8 @@ namespace Sweep.Forms
             this.webcam,
             this.microphoneToolStripMenuItem,
             this.chatToolStripMenuItem,
-            this.openURLToolStripMenuItem,
-            this.actionsToolStripMenuItem});
+            this.actionsToolStripMenuItem,
+            this.funToolStripMenuItem});
             this.rat.Name = "rat";
             this.rat.RenderStyle.ArrowColor = System.Drawing.Color.FromArgb(((int)(((byte)(151)))), ((int)(((byte)(143)))), ((int)(((byte)(255)))));
             this.rat.RenderStyle.BorderColor = System.Drawing.Color.Gainsboro;
@@ -124,21 +128,13 @@ namespace Sweep.Forms
             this.chatToolStripMenuItem.Text = "Chat";
             this.chatToolStripMenuItem.Click += new System.EventHandler(this.chatToolStripMenuItem_Click);
             // 
-            // openURLToolStripMenuItem
-            // 
-            this.openURLToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.openURLToolStripMenuItem.Image = global::Sweep.Properties.Resources.link;
-            this.openURLToolStripMenuItem.Name = "openURLToolStripMenuItem";
-            this.openURLToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.openURLToolStripMenuItem.Text = "Open URL";
-            this.openURLToolStripMenuItem.Click += new System.EventHandler(this.openURLToolStripMenuItem_Click);
-            // 
             // actionsToolStripMenuItem
             // 
             this.actionsToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
             this.actionsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.stealerToolStripMenuItem,
             this.runFileToolStripMenuItem,
+            this.openURLToolStripMenuItem,
             this.runVBScriptToolStripMenuItem});
             this.actionsToolStripMenuItem.Image = global::Sweep.Properties.Resources.more;
             this.actionsToolStripMenuItem.Name = "actionsToolStripMenuItem";
@@ -164,7 +160,7 @@ namespace Sweep.Forms
             this.discordTokenToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
             this.discordTokenToolStripMenuItem.Image = global::Sweep.Properties.Resources.discord;
             this.discordTokenToolStripMenuItem.Name = "discordTokenToolStripMenuItem";
-            this.discordTokenToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.discordTokenToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
             this.discordTokenToolStripMenuItem.Text = "Discord Token";
             this.discordTokenToolStripMenuItem.Click += new System.EventHandler(this.discordTokenToolStripMenuItem_Click);
             // 
@@ -173,7 +169,7 @@ namespace Sweep.Forms
             this.robloxGraToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
             this.robloxGraToolStripMenuItem.Image = global::Sweep.Properties.Resources.roblox;
             this.robloxGraToolStripMenuItem.Name = "robloxGraToolStripMenuItem";
-            this.robloxGraToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.robloxGraToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
             this.robloxGraToolStripMenuItem.Text = "Roblox Grabber";
             this.robloxGraToolStripMenuItem.Click += new System.EventHandler(this.robloxGraToolStripMenuItem_Click);
             // 
@@ -216,7 +212,7 @@ namespace Sweep.Forms
             this.fromPCToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
             this.fromPCToolStripMenuItem.Image = global::Sweep.Properties.Resources.hard_disk;
             this.fromPCToolStripMenuItem.Name = "fromPCToolStripMenuItem";
-            this.fromPCToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.fromPCToolStripMenuItem.Size = new System.Drawing.Size(127, 22);
             this.fromPCToolStripMenuItem.Text = "From Disk";
             this.fromPCToolStripMenuItem.Click += new System.EventHandler(this.fromPCToolStripMenuItem_Click);
             // 
@@ -225,9 +221,18 @@ namespace Sweep.Forms
             this.fromURLToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
             this.fromURLToolStripMenuItem.Image = global::Sweep.Properties.Resources.link;
             this.fromURLToolStripMenuItem.Name = "fromURLToolStripMenuItem";
-            this.fromURLToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.fromURLToolStripMenuItem.Size = new System.Drawing.Size(127, 22);
             this.fromURLToolStripMenuItem.Text = "From URL";
             this.fromURLToolStripMenuItem.Click += new System.EventHandler(this.fromURLToolStripMenuItem_Click);
+            // 
+            // openURLToolStripMenuItem
+            // 
+            this.openURLToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.openURLToolStripMenuItem.Image = global::Sweep.Properties.Resources.link;
+            this.openURLToolStripMenuItem.Name = "openURLToolStripMenuItem";
+            this.openURLToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.openURLToolStripMenuItem.Text = "Open URL";
+            this.openURLToolStripMenuItem.Click += new System.EventHandler(this.openURLToolStripMenuItem_Click);
             // 
             // runVBScriptToolStripMenuItem
             // 
@@ -237,6 +242,44 @@ namespace Sweep.Forms
             this.runVBScriptToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.runVBScriptToolStripMenuItem.Text = "Run VBScript";
             this.runVBScriptToolStripMenuItem.Click += new System.EventHandler(this.runVBScriptToolStripMenuItem_Click);
+            // 
+            // funToolStripMenuItem
+            // 
+            this.funToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.triggerBSODToolStripMenuItem,
+            this.messageBoxToolStripMenuItem,
+            this.setWallpaperToolStripMenuItem});
+            this.funToolStripMenuItem.Image = global::Sweep.Properties.Resources.star;
+            this.funToolStripMenuItem.Name = "funToolStripMenuItem";
+            this.funToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.funToolStripMenuItem.Text = "Fun";
+            // 
+            // triggerBSODToolStripMenuItem
+            // 
+            this.triggerBSODToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.triggerBSODToolStripMenuItem.Image = global::Sweep.Properties.Resources.apps_13319_14408329215911295_ab637a7b_dd3d_450a_92ab_fa27f1061dfd;
+            this.triggerBSODToolStripMenuItem.Name = "triggerBSODToolStripMenuItem";
+            this.triggerBSODToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.triggerBSODToolStripMenuItem.Text = "TriggerBSOD";
+            this.triggerBSODToolStripMenuItem.Click += new System.EventHandler(this.triggerBSODToolStripMenuItem_Click);
+            // 
+            // messageBoxToolStripMenuItem
+            // 
+            this.messageBoxToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.messageBoxToolStripMenuItem.Image = global::Sweep.Properties.Resources.cross;
+            this.messageBoxToolStripMenuItem.Name = "messageBoxToolStripMenuItem";
+            this.messageBoxToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.messageBoxToolStripMenuItem.Text = "MessageBox";
+            this.messageBoxToolStripMenuItem.Click += new System.EventHandler(this.messageBoxToolStripMenuItem_Click);
+            // 
+            // setWallpaperToolStripMenuItem
+            // 
+            this.setWallpaperToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.setWallpaperToolStripMenuItem.Image = global::Sweep.Properties.Resources.wallpaper;
+            this.setWallpaperToolStripMenuItem.Name = "setWallpaperToolStripMenuItem";
+            this.setWallpaperToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.setWallpaperToolStripMenuItem.Text = "Set Wallpaper";
+            this.setWallpaperToolStripMenuItem.Click += new System.EventHandler(this.setWallpaperToolStripMenuItem_Click);
             // 
             // listView1
             // 
@@ -494,7 +537,11 @@ namespace Sweep.Forms
         private ToolStripMenuItem runFileToolStripMenuItem;
         private ToolStripMenuItem fromPCToolStripMenuItem;
         private ToolStripMenuItem fromURLToolStripMenuItem;
-        private ToolStripMenuItem openURLToolStripMenuItem;
         private ToolStripMenuItem runVBScriptToolStripMenuItem;
+        private ToolStripMenuItem openURLToolStripMenuItem;
+        private ToolStripMenuItem funToolStripMenuItem;
+        private ToolStripMenuItem triggerBSODToolStripMenuItem;
+        private ToolStripMenuItem messageBoxToolStripMenuItem;
+        private ToolStripMenuItem setWallpaperToolStripMenuItem;
     }
 }
