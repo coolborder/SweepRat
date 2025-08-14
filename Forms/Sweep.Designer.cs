@@ -34,6 +34,22 @@ namespace Sweep.Forms
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Sweep));
             this.rat = new Guna.UI2.WinForms.Guna2ContextMenuStrip();
+            this.listView1 = new BrightIdeasSoftware.ObjectListView();
+            this.portnum = new System.Windows.Forms.Label();
+            this.clients = new System.Windows.Forms.Label();
+            this.logsview = new BrightIdeasSoftware.ObjectListView();
+            this.Time = ((BrightIdeasSoftware.OLVColumn)(new BrightIdeasSoftware.OLVColumn()));
+            this.Message = ((BrightIdeasSoftware.OLVColumn)(new BrightIdeasSoftware.OLVColumn()));
+            this.Type = ((BrightIdeasSoftware.OLVColumn)(new BrightIdeasSoftware.OLVColumn()));
+            this.counter = new Guna.UI2.WinForms.Guna2GradientButton();
+            this.usname = new System.Windows.Forms.Label();
+            this.timer1 = new System.Windows.Forms.Timer(this.components);
+            this.notifyIcon1 = new System.Windows.Forms.NotifyIcon(this.components);
+            this.DiskFileDialog = new System.Windows.Forms.OpenFileDialog();
+            this.guna2TextBox1 = new Guna.UI2.WinForms.Guna2TextBox();
+            this.builder = new Guna.UI2.WinForms.Guna2Button();
+            this.logs = new Guna.UI2.WinForms.Guna2Button();
+            this.home = new Guna.UI2.WinForms.Guna2Button();
             this.seescreen = new System.Windows.Forms.ToolStripMenuItem();
             this.webcam = new System.Windows.Forms.ToolStripMenuItem();
             this.microphoneToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -54,21 +70,7 @@ namespace Sweep.Forms
             this.triggerBSODToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.messageBoxToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.setWallpaperToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.listView1 = new BrightIdeasSoftware.ObjectListView();
-            this.portnum = new System.Windows.Forms.Label();
-            this.clients = new System.Windows.Forms.Label();
-            this.logsview = new BrightIdeasSoftware.ObjectListView();
-            this.Time = ((BrightIdeasSoftware.OLVColumn)(new BrightIdeasSoftware.OLVColumn()));
-            this.Message = ((BrightIdeasSoftware.OLVColumn)(new BrightIdeasSoftware.OLVColumn()));
-            this.Type = ((BrightIdeasSoftware.OLVColumn)(new BrightIdeasSoftware.OLVColumn()));
-            this.counter = new Guna.UI2.WinForms.Guna2GradientButton();
-            this.usname = new System.Windows.Forms.Label();
-            this.timer1 = new System.Windows.Forms.Timer(this.components);
-            this.notifyIcon1 = new System.Windows.Forms.NotifyIcon(this.components);
-            this.DiskFileDialog = new System.Windows.Forms.OpenFileDialog();
-            this.builder = new Guna.UI2.WinForms.Guna2Button();
-            this.logs = new Guna.UI2.WinForms.Guna2Button();
-            this.home = new Guna.UI2.WinForms.Guna2Button();
+            this.playSoundToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.rat.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.listView1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.logsview)).BeginInit();
@@ -94,192 +96,7 @@ namespace Sweep.Forms
             this.rat.RenderStyle.SelectionForeColor = System.Drawing.Color.White;
             this.rat.RenderStyle.SeparatorColor = System.Drawing.Color.Gainsboro;
             this.rat.RenderStyle.TextRenderingHint = System.Drawing.Text.TextRenderingHint.SystemDefault;
-            this.rat.Size = new System.Drawing.Size(181, 158);
-            // 
-            // seescreen
-            // 
-            this.seescreen.Image = global::Sweep.Properties.Resources.desktop;
-            this.seescreen.Name = "seescreen";
-            this.seescreen.Size = new System.Drawing.Size(180, 22);
-            this.seescreen.Text = "See Screen";
-            this.seescreen.Click += new System.EventHandler(this.seescreen_Click);
-            // 
-            // webcam
-            // 
-            this.webcam.Image = global::Sweep.Properties.Resources.camera;
-            this.webcam.Name = "webcam";
-            this.webcam.Size = new System.Drawing.Size(180, 22);
-            this.webcam.Text = "See Webcam";
-            this.webcam.Click += new System.EventHandler(this.webcam_Click);
-            // 
-            // microphoneToolStripMenuItem
-            // 
-            this.microphoneToolStripMenuItem.Image = global::Sweep.Properties.Resources.microphone;
-            this.microphoneToolStripMenuItem.Name = "microphoneToolStripMenuItem";
-            this.microphoneToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.microphoneToolStripMenuItem.Text = "Microphone";
-            this.microphoneToolStripMenuItem.Click += new System.EventHandler(this.microphoneToolStripMenuItem_Click);
-            // 
-            // chatToolStripMenuItem
-            // 
-            this.chatToolStripMenuItem.Image = global::Sweep.Properties.Resources.chat;
-            this.chatToolStripMenuItem.Name = "chatToolStripMenuItem";
-            this.chatToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.chatToolStripMenuItem.Text = "Chat";
-            this.chatToolStripMenuItem.Click += new System.EventHandler(this.chatToolStripMenuItem_Click);
-            // 
-            // actionsToolStripMenuItem
-            // 
-            this.actionsToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.actionsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.stealerToolStripMenuItem,
-            this.runFileToolStripMenuItem,
-            this.openURLToolStripMenuItem,
-            this.runVBScriptToolStripMenuItem});
-            this.actionsToolStripMenuItem.Image = global::Sweep.Properties.Resources.more;
-            this.actionsToolStripMenuItem.Name = "actionsToolStripMenuItem";
-            this.actionsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.actionsToolStripMenuItem.Text = "Actions";
-            // 
-            // stealerToolStripMenuItem
-            // 
-            this.stealerToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.stealerToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.discordTokenToolStripMenuItem,
-            this.robloxGraToolStripMenuItem,
-            this.cookiesToolStripMenuItem,
-            this.passwordsToolStripMenuItem,
-            this.everythingToolStripMenuItem});
-            this.stealerToolStripMenuItem.Image = global::Sweep.Properties.Resources.key_chain;
-            this.stealerToolStripMenuItem.Name = "stealerToolStripMenuItem";
-            this.stealerToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.stealerToolStripMenuItem.Text = "Stealer";
-            // 
-            // discordTokenToolStripMenuItem
-            // 
-            this.discordTokenToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.discordTokenToolStripMenuItem.Image = global::Sweep.Properties.Resources.discord;
-            this.discordTokenToolStripMenuItem.Name = "discordTokenToolStripMenuItem";
-            this.discordTokenToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
-            this.discordTokenToolStripMenuItem.Text = "Discord Token";
-            this.discordTokenToolStripMenuItem.Click += new System.EventHandler(this.discordTokenToolStripMenuItem_Click);
-            // 
-            // robloxGraToolStripMenuItem
-            // 
-            this.robloxGraToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.robloxGraToolStripMenuItem.Image = global::Sweep.Properties.Resources.roblox;
-            this.robloxGraToolStripMenuItem.Name = "robloxGraToolStripMenuItem";
-            this.robloxGraToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
-            this.robloxGraToolStripMenuItem.Text = "Roblox Grabber";
-            this.robloxGraToolStripMenuItem.Click += new System.EventHandler(this.robloxGraToolStripMenuItem_Click);
-            // 
-            // cookiesToolStripMenuItem
-            // 
-            this.cookiesToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.cookiesToolStripMenuItem.Image = global::Sweep.Properties.Resources.cookies;
-            this.cookiesToolStripMenuItem.Name = "cookiesToolStripMenuItem";
-            this.cookiesToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
-            this.cookiesToolStripMenuItem.Text = "Cookies";
-            // 
-            // passwordsToolStripMenuItem
-            // 
-            this.passwordsToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.passwordsToolStripMenuItem.Image = global::Sweep.Properties.Resources.chrome;
-            this.passwordsToolStripMenuItem.Name = "passwordsToolStripMenuItem";
-            this.passwordsToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
-            this.passwordsToolStripMenuItem.Text = "Browser Passwords";
-            // 
-            // everythingToolStripMenuItem
-            // 
-            this.everythingToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.everythingToolStripMenuItem.Name = "everythingToolStripMenuItem";
-            this.everythingToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
-            this.everythingToolStripMenuItem.Text = "Everything";
-            // 
-            // runFileToolStripMenuItem
-            // 
-            this.runFileToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.runFileToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.fromPCToolStripMenuItem,
-            this.fromURLToolStripMenuItem});
-            this.runFileToolStripMenuItem.Image = global::Sweep.Properties.Resources.open_folder;
-            this.runFileToolStripMenuItem.Name = "runFileToolStripMenuItem";
-            this.runFileToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.runFileToolStripMenuItem.Text = "Run File";
-            // 
-            // fromPCToolStripMenuItem
-            // 
-            this.fromPCToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.fromPCToolStripMenuItem.Image = global::Sweep.Properties.Resources.hard_disk;
-            this.fromPCToolStripMenuItem.Name = "fromPCToolStripMenuItem";
-            this.fromPCToolStripMenuItem.Size = new System.Drawing.Size(127, 22);
-            this.fromPCToolStripMenuItem.Text = "From Disk";
-            this.fromPCToolStripMenuItem.Click += new System.EventHandler(this.fromPCToolStripMenuItem_Click);
-            // 
-            // fromURLToolStripMenuItem
-            // 
-            this.fromURLToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.fromURLToolStripMenuItem.Image = global::Sweep.Properties.Resources.link;
-            this.fromURLToolStripMenuItem.Name = "fromURLToolStripMenuItem";
-            this.fromURLToolStripMenuItem.Size = new System.Drawing.Size(127, 22);
-            this.fromURLToolStripMenuItem.Text = "From URL";
-            this.fromURLToolStripMenuItem.Click += new System.EventHandler(this.fromURLToolStripMenuItem_Click);
-            // 
-            // openURLToolStripMenuItem
-            // 
-            this.openURLToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.openURLToolStripMenuItem.Image = global::Sweep.Properties.Resources.link;
-            this.openURLToolStripMenuItem.Name = "openURLToolStripMenuItem";
-            this.openURLToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.openURLToolStripMenuItem.Text = "Open URL";
-            this.openURLToolStripMenuItem.Click += new System.EventHandler(this.openURLToolStripMenuItem_Click);
-            // 
-            // runVBScriptToolStripMenuItem
-            // 
-            this.runVBScriptToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.runVBScriptToolStripMenuItem.Image = global::Sweep.Properties.Resources.wscript_101;
-            this.runVBScriptToolStripMenuItem.Name = "runVBScriptToolStripMenuItem";
-            this.runVBScriptToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.runVBScriptToolStripMenuItem.Text = "Run VBScript";
-            this.runVBScriptToolStripMenuItem.Click += new System.EventHandler(this.runVBScriptToolStripMenuItem_Click);
-            // 
-            // funToolStripMenuItem
-            // 
-            this.funToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.triggerBSODToolStripMenuItem,
-            this.messageBoxToolStripMenuItem,
-            this.setWallpaperToolStripMenuItem});
-            this.funToolStripMenuItem.Image = global::Sweep.Properties.Resources.star;
-            this.funToolStripMenuItem.Name = "funToolStripMenuItem";
-            this.funToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.funToolStripMenuItem.Text = "Fun";
-            // 
-            // triggerBSODToolStripMenuItem
-            // 
-            this.triggerBSODToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.triggerBSODToolStripMenuItem.Image = global::Sweep.Properties.Resources.apps_13319_14408329215911295_ab637a7b_dd3d_450a_92ab_fa27f1061dfd;
-            this.triggerBSODToolStripMenuItem.Name = "triggerBSODToolStripMenuItem";
-            this.triggerBSODToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.triggerBSODToolStripMenuItem.Text = "TriggerBSOD";
-            this.triggerBSODToolStripMenuItem.Click += new System.EventHandler(this.triggerBSODToolStripMenuItem_Click);
-            // 
-            // messageBoxToolStripMenuItem
-            // 
-            this.messageBoxToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.messageBoxToolStripMenuItem.Image = global::Sweep.Properties.Resources.cross;
-            this.messageBoxToolStripMenuItem.Name = "messageBoxToolStripMenuItem";
-            this.messageBoxToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.messageBoxToolStripMenuItem.Text = "MessageBox";
-            this.messageBoxToolStripMenuItem.Click += new System.EventHandler(this.messageBoxToolStripMenuItem_Click);
-            // 
-            // setWallpaperToolStripMenuItem
-            // 
-            this.setWallpaperToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.setWallpaperToolStripMenuItem.Image = global::Sweep.Properties.Resources.wallpaper;
-            this.setWallpaperToolStripMenuItem.Name = "setWallpaperToolStripMenuItem";
-            this.setWallpaperToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.setWallpaperToolStripMenuItem.Text = "Set Wallpaper";
-            this.setWallpaperToolStripMenuItem.Click += new System.EventHandler(this.setWallpaperToolStripMenuItem_Click);
+            this.rat.Size = new System.Drawing.Size(143, 136);
             // 
             // listView1
             // 
@@ -289,12 +106,12 @@ namespace Sweep.Forms
             this.listView1.ContextMenuStrip = this.rat;
             this.listView1.ForeColor = System.Drawing.SystemColors.WindowText;
             this.listView1.HideSelection = false;
-            this.listView1.Location = new System.Drawing.Point(4, 3);
+            this.listView1.Location = new System.Drawing.Point(4, 29);
             this.listView1.Name = "listView1";
             this.listView1.RowHeight = 25;
             this.listView1.SelectedColumnTint = System.Drawing.Color.FromArgb(((int)(((byte)(15)))), ((int)(((byte)(0)))), ((int)(((byte)(120)))), ((int)(((byte)(215)))));
             this.listView1.ShowGroups = false;
-            this.listView1.Size = new System.Drawing.Size(899, 441);
+            this.listView1.Size = new System.Drawing.Size(899, 415);
             this.listView1.TabIndex = 1;
             this.listView1.UseCompatibleStateImageBehavior = false;
             this.listView1.View = System.Windows.Forms.View.Details;
@@ -342,6 +159,7 @@ namespace Sweep.Forms
             this.logsview.TabIndex = 7;
             this.logsview.UseCompatibleStateImageBehavior = false;
             this.logsview.View = System.Windows.Forms.View.Details;
+            this.logsview.Visible = false;
             // 
             // Time
             // 
@@ -408,6 +226,33 @@ namespace Sweep.Forms
             this.DiskFileDialog.DefaultExt = "exe";
             this.DiskFileDialog.Filter = "All files|*.*";
             this.DiskFileDialog.Multiselect = true;
+            // 
+            // guna2TextBox1
+            // 
+            this.guna2TextBox1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.guna2TextBox1.BorderColor = System.Drawing.Color.Black;
+            this.guna2TextBox1.BorderRadius = 3;
+            this.guna2TextBox1.Cursor = System.Windows.Forms.Cursors.IBeam;
+            this.guna2TextBox1.DefaultText = "";
+            this.guna2TextBox1.DisabledState.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(208)))), ((int)(((byte)(208)))), ((int)(((byte)(208)))));
+            this.guna2TextBox1.DisabledState.FillColor = System.Drawing.Color.FromArgb(((int)(((byte)(226)))), ((int)(((byte)(226)))), ((int)(((byte)(226)))));
+            this.guna2TextBox1.DisabledState.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(138)))), ((int)(((byte)(138)))), ((int)(((byte)(138)))));
+            this.guna2TextBox1.DisabledState.PlaceholderForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(138)))), ((int)(((byte)(138)))), ((int)(((byte)(138)))));
+            this.guna2TextBox1.FocusedState.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(94)))), ((int)(((byte)(148)))), ((int)(((byte)(255)))));
+            this.guna2TextBox1.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.guna2TextBox1.ForeColor = System.Drawing.Color.Black;
+            this.guna2TextBox1.HoverState.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(94)))), ((int)(((byte)(148)))), ((int)(((byte)(255)))));
+            this.guna2TextBox1.IconLeft = global::Sweep.Properties.Resources.search;
+            this.guna2TextBox1.IconLeftSize = new System.Drawing.Size(15, 15);
+            this.guna2TextBox1.Location = new System.Drawing.Point(4, 6);
+            this.guna2TextBox1.Name = "guna2TextBox1";
+            this.guna2TextBox1.PlaceholderForeColor = System.Drawing.Color.DarkGray;
+            this.guna2TextBox1.PlaceholderText = "Find...";
+            this.guna2TextBox1.SelectedText = "";
+            this.guna2TextBox1.Size = new System.Drawing.Size(899, 20);
+            this.guna2TextBox1.TabIndex = 10;
+            this.guna2TextBox1.TextChanged += new System.EventHandler(this.guna2TextBox1_TextChanged);
             // 
             // builder
             // 
@@ -477,12 +322,208 @@ namespace Sweep.Forms
             this.home.TabIndex = 4;
             this.home.Click += new System.EventHandler(this.home_Click);
             // 
+            // seescreen
+            // 
+            this.seescreen.Image = global::Sweep.Properties.Resources.desktop;
+            this.seescreen.Name = "seescreen";
+            this.seescreen.Size = new System.Drawing.Size(142, 22);
+            this.seescreen.Text = "See Screen";
+            this.seescreen.Click += new System.EventHandler(this.seescreen_Click);
+            // 
+            // webcam
+            // 
+            this.webcam.Image = global::Sweep.Properties.Resources.camera;
+            this.webcam.Name = "webcam";
+            this.webcam.Size = new System.Drawing.Size(142, 22);
+            this.webcam.Text = "See Webcam";
+            this.webcam.Click += new System.EventHandler(this.webcam_Click);
+            // 
+            // microphoneToolStripMenuItem
+            // 
+            this.microphoneToolStripMenuItem.Image = global::Sweep.Properties.Resources.microphone;
+            this.microphoneToolStripMenuItem.Name = "microphoneToolStripMenuItem";
+            this.microphoneToolStripMenuItem.Size = new System.Drawing.Size(142, 22);
+            this.microphoneToolStripMenuItem.Text = "Microphone";
+            this.microphoneToolStripMenuItem.Click += new System.EventHandler(this.microphoneToolStripMenuItem_Click);
+            // 
+            // chatToolStripMenuItem
+            // 
+            this.chatToolStripMenuItem.Image = global::Sweep.Properties.Resources.chat;
+            this.chatToolStripMenuItem.Name = "chatToolStripMenuItem";
+            this.chatToolStripMenuItem.Size = new System.Drawing.Size(142, 22);
+            this.chatToolStripMenuItem.Text = "Chat";
+            this.chatToolStripMenuItem.Click += new System.EventHandler(this.chatToolStripMenuItem_Click);
+            // 
+            // actionsToolStripMenuItem
+            // 
+            this.actionsToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.actionsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.stealerToolStripMenuItem,
+            this.runFileToolStripMenuItem,
+            this.openURLToolStripMenuItem,
+            this.runVBScriptToolStripMenuItem});
+            this.actionsToolStripMenuItem.Image = global::Sweep.Properties.Resources.more;
+            this.actionsToolStripMenuItem.Name = "actionsToolStripMenuItem";
+            this.actionsToolStripMenuItem.Size = new System.Drawing.Size(142, 22);
+            this.actionsToolStripMenuItem.Text = "Actions";
+            // 
+            // stealerToolStripMenuItem
+            // 
+            this.stealerToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.stealerToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.discordTokenToolStripMenuItem,
+            this.robloxGraToolStripMenuItem,
+            this.cookiesToolStripMenuItem,
+            this.passwordsToolStripMenuItem,
+            this.everythingToolStripMenuItem});
+            this.stealerToolStripMenuItem.Image = global::Sweep.Properties.Resources.key_chain;
+            this.stealerToolStripMenuItem.Name = "stealerToolStripMenuItem";
+            this.stealerToolStripMenuItem.Size = new System.Drawing.Size(142, 22);
+            this.stealerToolStripMenuItem.Text = "Stealer";
+            // 
+            // discordTokenToolStripMenuItem
+            // 
+            this.discordTokenToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.discordTokenToolStripMenuItem.Image = global::Sweep.Properties.Resources.discord;
+            this.discordTokenToolStripMenuItem.Name = "discordTokenToolStripMenuItem";
+            this.discordTokenToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
+            this.discordTokenToolStripMenuItem.Text = "Discord Token";
+            this.discordTokenToolStripMenuItem.Click += new System.EventHandler(this.discordTokenToolStripMenuItem_Click);
+            // 
+            // robloxGraToolStripMenuItem
+            // 
+            this.robloxGraToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.robloxGraToolStripMenuItem.Image = global::Sweep.Properties.Resources.roblox;
+            this.robloxGraToolStripMenuItem.Name = "robloxGraToolStripMenuItem";
+            this.robloxGraToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
+            this.robloxGraToolStripMenuItem.Text = "Roblox Grabber";
+            this.robloxGraToolStripMenuItem.Click += new System.EventHandler(this.robloxGraToolStripMenuItem_Click);
+            // 
+            // cookiesToolStripMenuItem
+            // 
+            this.cookiesToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.cookiesToolStripMenuItem.Image = global::Sweep.Properties.Resources.cookies;
+            this.cookiesToolStripMenuItem.Name = "cookiesToolStripMenuItem";
+            this.cookiesToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
+            this.cookiesToolStripMenuItem.Text = "Cookies";
+            // 
+            // passwordsToolStripMenuItem
+            // 
+            this.passwordsToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.passwordsToolStripMenuItem.Image = global::Sweep.Properties.Resources.chrome;
+            this.passwordsToolStripMenuItem.Name = "passwordsToolStripMenuItem";
+            this.passwordsToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
+            this.passwordsToolStripMenuItem.Text = "Browser Passwords";
+            // 
+            // everythingToolStripMenuItem
+            // 
+            this.everythingToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.everythingToolStripMenuItem.Name = "everythingToolStripMenuItem";
+            this.everythingToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
+            this.everythingToolStripMenuItem.Text = "Everything";
+            // 
+            // runFileToolStripMenuItem
+            // 
+            this.runFileToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.runFileToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.fromPCToolStripMenuItem,
+            this.fromURLToolStripMenuItem});
+            this.runFileToolStripMenuItem.Image = global::Sweep.Properties.Resources.open_folder;
+            this.runFileToolStripMenuItem.Name = "runFileToolStripMenuItem";
+            this.runFileToolStripMenuItem.Size = new System.Drawing.Size(142, 22);
+            this.runFileToolStripMenuItem.Text = "Run File";
+            // 
+            // fromPCToolStripMenuItem
+            // 
+            this.fromPCToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.fromPCToolStripMenuItem.Image = global::Sweep.Properties.Resources.hard_disk;
+            this.fromPCToolStripMenuItem.Name = "fromPCToolStripMenuItem";
+            this.fromPCToolStripMenuItem.Size = new System.Drawing.Size(127, 22);
+            this.fromPCToolStripMenuItem.Text = "From Disk";
+            this.fromPCToolStripMenuItem.Click += new System.EventHandler(this.fromPCToolStripMenuItem_Click);
+            // 
+            // fromURLToolStripMenuItem
+            // 
+            this.fromURLToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.fromURLToolStripMenuItem.Image = global::Sweep.Properties.Resources.link;
+            this.fromURLToolStripMenuItem.Name = "fromURLToolStripMenuItem";
+            this.fromURLToolStripMenuItem.Size = new System.Drawing.Size(127, 22);
+            this.fromURLToolStripMenuItem.Text = "From URL";
+            this.fromURLToolStripMenuItem.Click += new System.EventHandler(this.fromURLToolStripMenuItem_Click);
+            // 
+            // openURLToolStripMenuItem
+            // 
+            this.openURLToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.openURLToolStripMenuItem.Image = global::Sweep.Properties.Resources.link;
+            this.openURLToolStripMenuItem.Name = "openURLToolStripMenuItem";
+            this.openURLToolStripMenuItem.Size = new System.Drawing.Size(142, 22);
+            this.openURLToolStripMenuItem.Text = "Open URL";
+            this.openURLToolStripMenuItem.Click += new System.EventHandler(this.openURLToolStripMenuItem_Click);
+            // 
+            // runVBScriptToolStripMenuItem
+            // 
+            this.runVBScriptToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.runVBScriptToolStripMenuItem.Image = global::Sweep.Properties.Resources.wscript_101;
+            this.runVBScriptToolStripMenuItem.Name = "runVBScriptToolStripMenuItem";
+            this.runVBScriptToolStripMenuItem.Size = new System.Drawing.Size(142, 22);
+            this.runVBScriptToolStripMenuItem.Text = "Run VBScript";
+            this.runVBScriptToolStripMenuItem.Click += new System.EventHandler(this.runVBScriptToolStripMenuItem_Click);
+            // 
+            // funToolStripMenuItem
+            // 
+            this.funToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.triggerBSODToolStripMenuItem,
+            this.messageBoxToolStripMenuItem,
+            this.setWallpaperToolStripMenuItem,
+            this.playSoundToolStripMenuItem});
+            this.funToolStripMenuItem.Image = global::Sweep.Properties.Resources.star;
+            this.funToolStripMenuItem.Name = "funToolStripMenuItem";
+            this.funToolStripMenuItem.Size = new System.Drawing.Size(142, 22);
+            this.funToolStripMenuItem.Text = "Fun";
+            // 
+            // triggerBSODToolStripMenuItem
+            // 
+            this.triggerBSODToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.triggerBSODToolStripMenuItem.Image = global::Sweep.Properties.Resources.apps_13319_14408329215911295_ab637a7b_dd3d_450a_92ab_fa27f1061dfd;
+            this.triggerBSODToolStripMenuItem.Name = "triggerBSODToolStripMenuItem";
+            this.triggerBSODToolStripMenuItem.Size = new System.Drawing.Size(146, 22);
+            this.triggerBSODToolStripMenuItem.Text = "TriggerBSOD";
+            this.triggerBSODToolStripMenuItem.Click += new System.EventHandler(this.triggerBSODToolStripMenuItem_Click);
+            // 
+            // messageBoxToolStripMenuItem
+            // 
+            this.messageBoxToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.messageBoxToolStripMenuItem.Image = global::Sweep.Properties.Resources.cross;
+            this.messageBoxToolStripMenuItem.Name = "messageBoxToolStripMenuItem";
+            this.messageBoxToolStripMenuItem.Size = new System.Drawing.Size(146, 22);
+            this.messageBoxToolStripMenuItem.Text = "MessageBox";
+            this.messageBoxToolStripMenuItem.Click += new System.EventHandler(this.messageBoxToolStripMenuItem_Click);
+            // 
+            // setWallpaperToolStripMenuItem
+            // 
+            this.setWallpaperToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.setWallpaperToolStripMenuItem.Image = global::Sweep.Properties.Resources.wallpaper;
+            this.setWallpaperToolStripMenuItem.Name = "setWallpaperToolStripMenuItem";
+            this.setWallpaperToolStripMenuItem.Size = new System.Drawing.Size(146, 22);
+            this.setWallpaperToolStripMenuItem.Text = "Set Wallpaper";
+            this.setWallpaperToolStripMenuItem.Click += new System.EventHandler(this.setWallpaperToolStripMenuItem_Click);
+            // 
+            // playSoundToolStripMenuItem
+            // 
+            this.playSoundToolStripMenuItem.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.playSoundToolStripMenuItem.Image = global::Sweep.Properties.Resources.playblue;
+            this.playSoundToolStripMenuItem.Name = "playSoundToolStripMenuItem";
+            this.playSoundToolStripMenuItem.Size = new System.Drawing.Size(146, 22);
+            this.playSoundToolStripMenuItem.Text = "Play Sound";
+            this.playSoundToolStripMenuItem.Click += new System.EventHandler(this.playSoundToolStripMenuItem_Click);
+            // 
             // Sweep
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.ControlLightLight;
             this.ClientSize = new System.Drawing.Size(983, 467);
+            this.Controls.Add(this.guna2TextBox1);
             this.Controls.Add(this.usname);
             this.Controls.Add(this.counter);
             this.Controls.Add(this.builder);
@@ -543,5 +584,7 @@ namespace Sweep.Forms
         private ToolStripMenuItem triggerBSODToolStripMenuItem;
         private ToolStripMenuItem messageBoxToolStripMenuItem;
         private ToolStripMenuItem setWallpaperToolStripMenuItem;
+        private ToolStripMenuItem playSoundToolStripMenuItem;
+        private Guna.UI2.WinForms.Guna2TextBox guna2TextBox1;
     }
 }

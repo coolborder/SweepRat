@@ -15,7 +15,7 @@ namespace Sweep.Forms
 {
     public partial class MsgBox : Form
     {
-        public static string clientid;
+        public string clientid;
         public LazyServerHost serverHost;
 
         public string icon = "error";
@@ -40,8 +40,6 @@ namespace Sweep.Forms
 
         private async void submit_Click(object sender, EventArgs e)
         {
-            MessageBox.Show(icon);
-
             var txttitle = title.Text;
             var txtmsg = txt.Text;
 
@@ -57,7 +55,8 @@ namespace Sweep.Forms
                 ["command"] = "msgbox",
                 ["title"] = txttitle,
                 ["message"] = txtmsg,
-                ["button"] = button
+                ["icon"] = icon.ToLower(),
+                ["button"] = button.ToLower()
             }.ToString());
         }
     }

